@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "MUL 11 neutral mutator",
+            "request": "launch",
+            "mainClass": "ec.Evolve",
+            "projectName": "ecj",
+            "args": "-file ec/app/multiplexerslow/11-3.params",
+            // "stopOnEntry": true,
+            "cwd": "${workspaceFolder}/target/classes/"
+        },
+        {
+            "type": "java",
+            "name": "MUL 11",
+            "request": "launch",
+            "mainClass": "ec.Evolve",
+            "projectName": "ecj",
+            "args": "-file ec/app/multiplexerslow/11.params",
+            // "stopOnEntry": true,
+            "cwd": "${workspaceFolder}/target/classes/"
+        }        
+    ]
+}

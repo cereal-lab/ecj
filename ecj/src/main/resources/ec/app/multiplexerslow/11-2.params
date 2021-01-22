@@ -61,10 +61,18 @@ eval.problem.data = ec.app.multiplexerslow.MultiplexerData
 eval.problem.bits = 3
 gp.fs.0.size = 15
 
-#evalthreads = auto
-#breedthreads = auto
-evalthreads = 1
-breedthreads = 1
+pop.subpop.0.species.pipe = ec.app.multiplexer.NeutralMutator
+pop.subpop.0.species.pipe.likelihood = 1
+# Subsidiary pipelines:
+pop.subpop.0.species.pipe.num-sources = 1
+pop.subpop.0.species.pipe.source.0 = ec.breed.MultiBreedingPipeline
+pop.subpop.0.species.pipe.source.0.generate-max = false
+pop.subpop.0.species.pipe.source.0.num-sources = 2
+pop.subpop.0.species.pipe.source.0.source.0 = ec.gp.koza.CrossoverPipeline
+pop.subpop.0.species.pipe.source.0.source.0.prob = 0.9
+pop.subpop.0.species.pipe.source.0.source.1 = ec.breed.ReproductionPipeline
+pop.subpop.0.species.pipe.source.0.source.1.prob = 0.1
 
-#pop.subpop.0.size =			64
-#select.tournament.size =    64
+#(T 7) -> (Cross 0.9 | Repro 0.1) -> NeutralMutator  
+#(T 7) -> NeutralMutator  -> (Cross 0.9 | Repro 0.1)
+#Tournament -> ...  -> NeutralMutator  

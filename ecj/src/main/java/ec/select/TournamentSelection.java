@@ -7,6 +7,7 @@
 
 package ec.select;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import ec.*;
 import ec.util.*;
@@ -132,6 +133,8 @@ public class TournamentSelection extends SelectionMethod implements SteadyStateB
         {
         return first.fitness.betterThan(second.fitness);
         }
+
+    private final String distrKey = "indDistribution";
                 
     public int produce(final int subpopulation,
         final EvolutionState state,
@@ -157,9 +160,24 @@ public class TournamentSelection extends SelectionMethod implements SteadyStateB
                 if (betterThan(oldinds.get(j), oldinds.get(best), subpopulation, state, thread))  // j is better than best
                     best = j;
                 }
-            
+
+        if (!state.data[thread].containsKey(distrKey)) {
+            state.data[thread].put(distrKey, new int[state.population.subpops.get(subpopulation).individuals.size()]);
+        }
+        ((int[])state.data[thread].get(distrKey))[best] += 1;
         return best;
         }
+
+    public void finishProducing(final EvolutionState state,
+        final int subpopulation,
+        final int thread)
+    { 
+        int[] distr = ((int[])state.data[thread].get(distrKey));
+        if (distr == null) return;
+        // state.output.message("----Distr " + Arrays.toString(distr));                    
+        state.data[thread].remove(distrKey);
+    }
+
 
     // included for SteadyState
     public void individualReplaced(final SteadyStateEvolutionState state,

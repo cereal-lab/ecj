@@ -61,6 +61,29 @@ eval.problem.data = ec.app.multiplexerslow.MultiplexerData
 eval.problem.bits = 3
 gp.fs.0.size = 15
 
+pop.subpop.0.species.pipe = ec.breed.MultiBreedingPipeline
+pop.subpop.0.species.pipe.generate-max = false
+pop.subpop.0.species.pipe.num-sources = 2
+pop.subpop.0.species.pipe.source.0 = ec.gp.koza.CrossoverPipeline
+pop.subpop.0.species.pipe.source.0.prob = 0.9
+pop.subpop.0.species.pipe.source.1 = ec.breed.ReproductionPipeline
+pop.subpop.0.species.pipe.source.1.prob = 0.1
+
+gp.koza.xover.source.0 = ec.app.multiplexer.NeutralMutator
+gp.koza.xover.source.1 = same
+gp.koza.xover.ns.0 = ec.gp.koza.KozaNodeSelector
+gp.koza.xover.ns.1 = same
+gp.koza.xover.maxdepth = 17
+# This is the default for Koza and lil-gp, though it's
+# a little wimpy; on the other hand, a higher number can
+# make things really slow
+gp.koza.xover.tries = 1
+
+
+#(T 7) -> (Cross 0.9 | Repro 0.1) -> NeutralMutator  
+#(T 7) -> NeutralMutator  -> (Cross 0.9 | Repro 0.1)
+#Tournament -> ...  -> NeutralMutator  
+
 #evalthreads = auto
 #breedthreads = auto
 evalthreads = 1
