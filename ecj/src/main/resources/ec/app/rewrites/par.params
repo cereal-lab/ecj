@@ -1,0 +1,7 @@
+parent.0 = base.params
+
+eval.problem = ec.app.rewrites.Parity
+eval.problem.busSize = 11
+
+evalthreads = auto
+breedthreads = auto

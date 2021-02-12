@@ -1,0 +1,16 @@
+parent.0 = base.params
+
+eval.problem = ec.app.rewrites.Majority
+eval.problem.busSize = 11
+
+#currently neutral strategies are not thread safe!!!!
+#evalthreads = auto
+#breedthreads = auto
+
+gp.koza.xover.source.0 = ec.gp.transform.NeutralMutator
+gp.koza.xover.source.1 = same
+
+gp.koza.mutate.strategy = ec.domain.bool.BoolStrategyProvider
+gp.koza.mutate.showStats = true
+gp.strategies.rules = ec.domain.bool.BoolRuleProvider
+gp.strategies.name = axioms

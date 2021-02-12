@@ -61,5 +61,14 @@ eval.problem.data = ec.app.multiplexer.MultiplexerData
 eval.problem.bits = 3
 gp.fs.0.size = 15
 
-generations = 101
 
+gp.koza.xover.source.0 = ec.gp.transform.NeutralMutator
+gp.koza.xover.source.1 = same
+
+gp.koza.mutate.strategy = ec.app.multiplexerslow.BoolStrategyProvider
+gp.koza.mutate.showStats = true
+gp.strategies.rules = ec.app.multiplexer.BoolRuleProvider
+gp.strategies.name = tranPropag
+
+
+generations = 101

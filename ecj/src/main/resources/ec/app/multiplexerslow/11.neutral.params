@@ -61,8 +61,18 @@ eval.problem.data = ec.app.multiplexerslow.MultiplexerData
 eval.problem.bits = 3
 gp.fs.0.size = 15
 
-evalthreads = auto
-breedthreads = auto
+gp.koza.xover.source.0 = ec.gp.transform.NeutralMutator
+gp.koza.xover.source.1 = same
+
+gp.koza.mutate.strategy = ec.app.multiplexerslow.BoolStrategyProvider
+gp.strategies.rules = ec.app.multiplexerslow.BoolRuleProvider
+gp.strategies.name = oneRewrite
+
+#(T 7) -> NeutralMutator  -> (Cross 0.9 | Repro 0.1)
+#Tournament -> ...  -> NeutralMutator  
+
+evalthreads = 1
+breedthreads = 1
 #evalthreads = 1
 #breedthreads = 1
 

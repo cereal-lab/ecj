@@ -1,0 +1,38 @@
+parent.0 = ../../gp/koza/koza.params
+
+
+# Stolen from koza/params -- overwriting just
+# a little for readability
+# You need to create at least one function set, 
+# called "f0", which your first tree will use.  
+
+gp.fs.size = 1
+gp.fs.0.name = f0
+
+gp.fs.0.func.0 = ec.domain.bool.And
+gp.fs.0.func.0.nc = nc2
+gp.fs.0.func.1 = ec.domain.bool.Or
+gp.fs.0.func.1.nc = nc2
+gp.fs.0.func.2 = ec.domain.bool.Not
+gp.fs.0.func.2.nc = nc1
+gp.fs.0.func.3 = ec.domain.bool.BusBit
+gp.fs.0.func.3.nc = nc0
+gp.fs.0.func.4 = ec.domain.bool.True
+gp.fs.0.func.4.nc = nc0
+gp.fs.0.func.5 = ec.domain.bool.False
+gp.fs.0.func.5.nc = nc0
+gp.fs.0.func.6 = ec.domain.bool.If
+gp.fs.0.func.6.nc = nc3
+gp.fs.0.func.7 = ec.domain.bool.Nand
+gp.fs.0.func.7.nc = nc2
+gp.fs.0.func.8 = ec.domain.bool.Nor
+gp.fs.0.func.8.nc = nc2
+gp.fs.0.func.9 = ec.domain.bool.Xor
+gp.fs.0.func.9.nc = nc2
+
+
+#NOTE: we only have 1 ERC. But True and False are excluded - they are only for transforms
+gp.fs.0.size = 4
+
+eval.problem.data = ec.domain.bool.BoolData
+generations = 101

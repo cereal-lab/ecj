@@ -1,0 +1,11 @@
+parent.0 = base.params
+
+eval.problem = ec.app.rewrites.Parity
+eval.problem.busSize = 11
+
+evalthreads = auto
+breedthreads = auto
+
+gp.koza.xover.source.0 = ec.gp.koza.MutationPipeline
+gp.koza.xover.source.1 = same
+

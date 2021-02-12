@@ -161,10 +161,10 @@ public class TournamentSelection extends SelectionMethod implements SteadyStateB
                     best = j;
                 }
 
-        if (!state.data[thread].containsKey(distrKey)) {
-            state.data[thread].put(distrKey, new int[state.population.subpops.get(subpopulation).individuals.size()]);
-        }
-        ((int[])state.data[thread].get(distrKey))[best] += 1;
+        // if (!state.data[thread].containsKey(distrKey)) {
+        //     state.data[thread].put(distrKey, new int[state.population.subpops.get(subpopulation).individuals.size()]);
+        // }
+        // ((int[])state.data[thread].get(distrKey))[best] += 1;
         return best;
         }
 
@@ -172,10 +172,10 @@ public class TournamentSelection extends SelectionMethod implements SteadyStateB
         final int subpopulation,
         final int thread)
     { 
-        int[] distr = ((int[])state.data[thread].get(distrKey));
-        if (distr == null) return;
+        // int[] distr = ((int[])state.data[thread].get(distrKey));
+        // if (distr == null) return;
         // state.output.message("----Distr " + Arrays.toString(distr));                    
-        state.data[thread].remove(distrKey);
+        // state.data[thread].remove(distrKey);
     }
 
 
