@@ -1,7 +1,7 @@
 parent.0 = base.params
 
 eval.problem = ec.app.rewrites.Multiplexer
-eval.problem.busSize = 11
+eval.problem.busSize = 20
 
 evalthreads = auto
 breedthreads = auto

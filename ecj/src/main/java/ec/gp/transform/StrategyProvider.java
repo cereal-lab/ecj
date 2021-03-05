@@ -1,5 +1,8 @@
 package ec.gp.transform;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import ec.EvolutionState;
 import ec.Prototype;
 import ec.gp.GPDefaults;
@@ -15,6 +18,10 @@ public abstract class StrategyProvider implements Prototype {
     protected String strategyName;
 
     abstract public Strategy getStrategy(GPNode i);
+
+    public Set<Class<?>> getCommutativeFuncs() {
+        return new HashSet<>();
+    }
 
     @Override
     public Object clone() {

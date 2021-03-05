@@ -5,7 +5,7 @@ import csv
 import sys
 import numpy as np
 
-params = [ "mul.n", "par.n", "maj.n", "cmp.n" ]
+params = [ "mul.n.20" ]
 def cmd(p): 
     return f"cd target/classes && java ec.Evolve -file ec/app/rewrites/{p}.params"
 
@@ -45,6 +45,8 @@ def read(name):
 
 import scipy.stats as stats
 
+import scikit_posthocs as sp
+
 # def tvalue(f1, f2):
 #     return stats.ttest_ind(f1, f2, equal_var=False)
 
@@ -74,11 +76,22 @@ def bor(exp):
     ''' best of run, exp is (f1, f2, ...)
     '''
     return tuple([run[-1] for run in r1] for r1 in exp)
-    
 
-def allStats(f1, f2, althyp='two-sided'): 
-    return { 'mean1': np.mean(f1), 'std1': np.std(f1), 'mean2': np.mean(f2), 'std2': np.std(f2), \
-                'ttest': stats.ttest_ind(f1, f2, equal_var=False, alternative=althyp), 'utest': stats.mannwhitneyu(f1, f2,alternative=althyp)}
+import pandas as pd
+
+def allStats(fs):
+    fsa = np.array(fs)
+    # print(fsa)
+    # print(fsa.T)
+    return { 'm_std': [ { "mean": np.mean(f), 'std1': np.std(f) } for f in fsa ], 
+            'friedman': stats.friedmanchisquare(*fsa),
+            'nemenyi': sp.posthoc_nemenyi_friedman(fsa.T) }
+    
+    stats.friedmanchisquare(*fs)
+
+# def allStats(f1, f2, althyp='two-sided'): 
+#     return { 'mean1': np.mean(f1), 'std1': np.std(f1), 'mean2': np.mean(f2), 'std2': np.std(f2), \
+#                 'ttest': stats.ttest_ind(f1, f2, equal_var=False, alternative=althyp), 'utest': stats.mannwhitneyu(f1, f2,alternative=althyp)}
 
 def diag(f1, f2):
     res1 = read(f1)
@@ -107,12 +120,12 @@ def charts(problems, file="test.png"):
     for (i, problemLine) in enumerate(problems): 
         for (j, problem) in enumerate(problemLine):
             ax = (axs[i,j] if type(axs) is np.ndarray else axs)
-            for f in problem['fs']: 
+            for (k, f) in enumerate(problem['fs']): 
                 fgens = np.transpose(f['data'])
                 conf_int_gens = [ (mean, ) + stats.t.interval(0.95, len(gen)-1, loc=mean, scale=stats.sem(gen)) for gen in fgens for mean in [ np.mean(gen) ] ]
                 gens = list(range(len(conf_int_gens)))
                 
-                ax.plot(gens, [m for (m, l, u) in conf_int_gens ], color=f['color'], label=f['title'], marker=f['marker'],ms=5, markevery=10)
+                ax.plot(gens, [m for (m, l, u) in conf_int_gens ], color=f['color'], label=f['title'], marker=f['marker'],ms=5, markevery=10, linewidth=1) #, linestyle="dotted")
                 ax.fill_between(gens, [u for (m, l, u) in conf_int_gens ], [l for (m, l, u) in conf_int_gens ], color=[f['color'] + "20"])
             ax.legend(shadow=True, fancybox=True)
             if problem['title'] is not None:

@@ -15,12 +15,12 @@ from analyze import *
 
 results = \
     [
-        # [ { 'title': None, 'files': ["data/11/mul.csv", "data/11/mul.a.csv", "data/11/mul.n.csv"] } ]
+        [ { 'title': None, 'files': ["data/20/mul.csv", "data/20/mul.mut.csv", "data/20/mul.a.csv", "data/20/mul.n.2.csv"] } ]
         # [ { 'title': None, 'files': ["mul.csv", "mul.a.csv", "mul.n.csv"] } ]
-        [ { 'title': 'MUL-11', 'files': ["data/11/mul.csv", "mul.mut.csv", "mul.n.csv"] },
-            { 'title': 'PAR-11', 'files': ["data/11/par.csv", "par.mut.csv", "par.n.csv"] } ],
-        [ { 'title': 'MAJ-11', 'files': ["data/11/maj.csv", "maj.mut.csv", "maj.n.csv"] },
-            { 'title': 'CMP-11', 'files': ["data/11/cmp.csv", "cmp.mut.csv", "cmp.n.csv"] } ]
+        # [ { 'title': 'MUL-11', 'files': ["data/11/mul.csv", "mul.mut.csv", "data/11/mul.n.csv"] },
+        #     { 'title': 'PAR-11', 'files': ["data/11/par.csv", "par.mut.csv", "data/11/par.n.csv"] } ],
+        # [ { 'title': 'MAJ-11', 'files': ["data/11/maj.csv", "maj.mut.csv", "data/11/maj.n.csv"] },
+        #     { 'title': 'CMP-11', 'files': ["data/11/cmp.csv", "cmp.mut.csv", "data/11/cmp.n.csv"] } ]
         # [ { 'title': None, 'files': ["data/11/par.csv", "data/11/par.a.csv", "data/11/par.n.csv"] } ]
         # [ { 'title': None, 'files': ["data/11/maj.csv", "data/11/maj.a.csv", "data/11/maj.n.csv"] } ]
         # [ { 'title': None, 'files': ["data/11/cmp.csv", "data/11/cmp.a.csv", "data/11/cmp.n.csv"] } ]
@@ -31,17 +31,17 @@ results = \
         # ]
     ]
 
-colors = [ { 'color': '#8a85f5', 'title': 'RTsTx', 'marker':'o' }, { 'color': '#45c46f', 'title': 'RTsTmx', 'marker':'v' }, { 'color': '#fa8b5f', 'title': 'RTsNTx', 'marker':'s' } ]
+colors = [ {'color': '#cc4bc1', 'title':'RTsTx', 'marker':'x'}, { 'color': '#8a85f5', 'title': 'RTsTmx', 'marker':'o' }, { 'color': '#45c46f', 'title': 'RTsNaTx', 'marker':'v' }, { 'color': '#fa8b5f', 'title': 'RTsNTx', 'marker':'s' } ]
 
 for resLine in results:
     for res in resLine:
         res['data'] = [ read(expFile) for expFile in res['files'] ]
         res['bors'] = bor(res['data'])
-        res['stats'] = allStats(res['bors'][1], res['bors'][2])
+        res['stats'] = allStats(res['bors'])
         res['fs'] = [ {'data': r, 'color': colors[i]['color'], 'title':colors[i]['title'], 'marker': colors[i]['marker']} for (i, r) in enumerate(res['data']) ]
         print(f"Stats for {res['title']}:\n{res['stats']}\n ")
 
-charts(results, "with-mut.png") 
+charts(results, "MUL-20.2.png") 
 
 
 # # bors = bor(exps)

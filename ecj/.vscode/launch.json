@@ -6,12 +6,18 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Launch Test",
+            "request": "launch",
+            "mainClass": "ec.Test",
+            "projectName": "ecj"
+        },
+        {
+            "type": "java",
             "name": "MUL 11",
             "request": "launch",
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
-            "args": "-file ec/app/rewrites/mul.params",
-            // "stopOnEntry": true,
+            "args": "-file ec/app/rewrites/mul.mut.params",
             "cwd": "${workspaceFolder}/target/classes/"
         },
         {
@@ -21,7 +27,6 @@
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
             "args": "-file ec/app/rewrites/par.params",
-            // "stopOnEntry": true,
             "cwd": "${workspaceFolder}/target/classes/"
         },
         {
@@ -31,7 +36,6 @@
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
             "args": "-file ec/app/rewrites/maj.params",
-            // "stopOnEntry": true,
             "cwd": "${workspaceFolder}/target/classes/"
         },
         {
@@ -41,9 +45,8 @@
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
             "args": "-file ec/app/rewrites/cmp.params",
-            // "stopOnEntry": true,
             "cwd": "${workspaceFolder}/target/classes/"
-        }, 
+        },
         {
             "type": "java",
             "name": "MUL 11 RTsNTx",
@@ -51,9 +54,8 @@
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
             "args": "-file ec/app/rewrites/mul.n.params",
-            // "stopOnEntry": true,
             "cwd": "${workspaceFolder}/target/classes/"
-        },            
+        },
         {
             "type": "java",
             "name": "PAR even-12 neutral mutator",
@@ -61,9 +63,8 @@
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
             "args": "-file ec/app/parity/parity.neutral.params",
-            // "stopOnEntry": true,
             "cwd": "${workspaceFolder}/target/classes/"
-        },                
+        },
         {
             "type": "java",
             "name": "MAJ 13 neutral mutator",
@@ -71,7 +72,6 @@
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
             "args": "-file ec/app/majorityBits/majority.neutral.params",
-            // "stopOnEntry": true,
             "cwd": "${workspaceFolder}/target/classes/"
         },
         {
@@ -81,7 +81,6 @@
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
             "args": "-file ec/app/comparator/comparator.neutral.params",
-            // "stopOnEntry": true,
             "cwd": "${workspaceFolder}/target/classes/"
         },
         {
@@ -91,8 +90,7 @@
             "mainClass": "ec.Evolve",
             "projectName": "ecj",
             "args": "-file ec/app/comparator/comparator.params",
-            // "stopOnEntry": true,
             "cwd": "${workspaceFolder}/target/classes/"
-        }        
+        }
     ]
 }

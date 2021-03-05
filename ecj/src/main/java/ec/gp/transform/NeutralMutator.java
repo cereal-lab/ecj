@@ -20,7 +20,6 @@ import ec.gp.koza.KozaFitness;
 import ec.gp.koza.MutationPipeline;
 import ec.gp.transform.Strategy.StrategyResult;
 import ec.gp.transform.Strategy.StrategyStats;
-import ec.gp.transform.Transform.ReplaceFailed;
 import ec.util.Output;
 import ec.util.Parameter;
 // import ec.app.multiplexerslow.func.*;
@@ -131,7 +130,7 @@ public class NeutralMutator extends MutationPipeline {
             // i.printTrees(state, treesBeforeLog);
 
             // KozaFitness fitnessBefore = (KozaFitness)i.fitness;
-            Strategy strategy = strategies.getStrategy(i.trees[0].child);
+            Strategy strategy = strategies.getStrategy(i.trees[0].child);            
             // strategy.setLogger(state.output::message);
             // strategy.set(sstats);
             // i.trees[0].child.printRootedTreeForHumans(state, Output.ALL_MESSAGE_LOGS, 0, 0);
@@ -182,7 +181,7 @@ public class NeutralMutator extends MutationPipeline {
                 //         // }
                 //     }
                 // }
-            } catch (ReplaceFailed e) {
+            } catch (ec.gp.transform.Strategy.ReplaceFailed e) {
                 state.output.fatal("Replacement failed due to metadata missmatch");
             }
 

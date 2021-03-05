@@ -9,3 +9,4 @@ breedthreads = auto
 gp.koza.xover.source.0 = ec.gp.koza.MutationPipeline
 gp.koza.xover.source.1 = same
 
+gp.koza.mutate.likelihood = 0.1

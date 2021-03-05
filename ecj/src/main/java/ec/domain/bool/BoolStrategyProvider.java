@@ -1,5 +1,7 @@
 package ec.domain.bool;
 
+import java.util.Set;
+
 import ec.EvolutionState;
 import ec.gp.GPNode;
 import ec.gp.transform.Strategy;
@@ -11,6 +13,7 @@ public class BoolStrategyProvider extends StrategyProvider {
     private static final long serialVersionUID = 1L;
 
     private Strategy reduce;
+    private Strategy reduceOnDepth;
     private Strategy axioms;
     private Strategy tranPropag;
     @Override
@@ -56,10 +59,12 @@ public class BoolStrategyProvider extends StrategyProvider {
             Strategy.FirstMatch(rules.r("not not x -> x")),    
             //reduction to const
             // Strategy.All(
+            
             Strategy.FirstMatch(rules.r("not x and x -> 0")),
-            Strategy.FirstMatch(rules.r("x and not x -> 0")),
+            // Strategy.FirstMatch(rules.r("x and not x -> 0")),
             Strategy.FirstMatch(rules.r("not x or x -> 1")),
-            Strategy.FirstMatch(rules.r("x or not x -> 1")),
+            // Strategy.FirstMatch(rules.r("x or not x -> 1")),
+            
             // ),
             // Strategy.AnyMatch(rules.r("if x y y -> y")),
             // Strategy.AnyMatch(rules.r("if 0 y z -> z")),
@@ -67,39 +72,47 @@ public class BoolStrategyProvider extends StrategyProvider {
 
             // Strategy.All(
             Strategy.FirstMatch(rules.r("0 and x -> 0")),
-            Strategy.FirstMatch(rules.r("x and 0 -> 0")),
+            // Strategy.FirstMatch(rules.r("x and 0 -> 0")),
             Strategy.FirstMatch(rules.r("1 and x -> x")),
-            Strategy.FirstMatch(rules.r("x and 1 -> x")),
+            // Strategy.FirstMatch(rules.r("x and 1 -> x")),
             Strategy.FirstMatch(rules.r("0 or x -> x")),
-            Strategy.FirstMatch(rules.r("x or 0 -> x")),
+            // Strategy.FirstMatch(rules.r("x or 0 -> x")),
             Strategy.FirstMatch(rules.r("1 or x -> 1")),
-            Strategy.FirstMatch(rules.r("x or 1 -> 1")),
+            // Strategy.FirstMatch(rules.r("x or 1 -> 1")),
             Strategy.FirstMatch(rules.r("not 0 -> 1")),
-            Strategy.FirstMatch(rules.r("not 1 -> 0"))
+            Strategy.FirstMatch(rules.r("not 1 -> 0")),
+            Strategy.FirstMatch(rules.r("x or (x and y) -> x")),
+            Strategy.FirstMatch(rules.r("x and (x or y) -> x"))
             // )
             // Strategy.AnyMatch(rules.r("((a nor a) nor (a nor a)) -> a")),
             // Strategy.AnyMatch(rules.r("((a nand a) nand (a nand a)) -> a"))                  
-        );
+        );        
+
+        reduce.set(this.getCommutativeFuncs());
+
+        reduceOnDepth = Strategy.On(Strategy.Depth(14, reduce));
+
+        reduceOnDepth.set(this.getCommutativeFuncs());
 
         axioms = Strategy.NTimesMax(5, Strategy.Any(            
             //distributivity
             Strategy.Any( 
                 Strategy.AnyMatch(rules.r("(y or z) and x -> (y and x) or (z and x)")),
-                Strategy.AnyMatch(rules.r("x and (y or z) -> (x and y) or (x and z)")),  
-                Strategy.AnyMatch(rules.r("(y and z) or x -> (y or x) and (z or x)")),
-                Strategy.AnyMatch(rules.r("x or (y and z) -> (x or y) and (x or z)"))
+                // Strategy.AnyMatch(rules.r("x and (y or z) -> (x and y) or (x and z)")),  
+                Strategy.AnyMatch(rules.r("(y and z) or x -> (y or x) and (z or x)"))
+                // Strategy.AnyMatch(rules.r("x or (y and z) -> (x or y) and (x or z)"))
             ),
             //commutativity 
-            Strategy.Any( 
-                Strategy.AnyMatch(rules.r("x and y -> y and x")),
-                Strategy.AnyMatch(rules.r("x or y -> y or x"))
-            ),
+            // Strategy.Any( 
+            //     Strategy.AnyMatch(rules.r("x and y -> y and x")),
+            //     Strategy.AnyMatch(rules.r("x or y -> y or x"))
+            // ),
             //associativity
             Strategy.Any( 
                 Strategy.AnyMatch(rules.r("x or (y or z) -> (x or y) or z")),
-                Strategy.AnyMatch(rules.r("x and (y and z) -> (x and y) and z")),
-                Strategy.AnyMatch(rules.r("(x or y) or z -> x or (y or z)")),
-                Strategy.AnyMatch(rules.r("(x and y) and z -> x and (y and z)"))
+                Strategy.AnyMatch(rules.r("x and (y and z) -> (x and y) and z"))
+                // Strategy.AnyMatch(rules.r("(x or y) or z -> x or (y or z)")),
+                // Strategy.AnyMatch(rules.r("(x and y) and z -> x and (y and z)"))
             ),  
             //absorption
             Strategy.Any( 
@@ -114,9 +127,9 @@ public class BoolStrategyProvider extends StrategyProvider {
             //complements
             Strategy.Any(
                 Strategy.AnyMatch(rules.r("not x and x -> 0")),
-                Strategy.AnyMatch(rules.r("x and not x -> 0")),
-                Strategy.AnyMatch(rules.r("not x or x -> 1")),
-                Strategy.AnyMatch(rules.r("x or not x -> 1"))
+                // Strategy.AnyMatch(rules.r("x and not x -> 0")),
+                Strategy.AnyMatch(rules.r("not x or x -> 1"))
+                // Strategy.AnyMatch(rules.r("x or not x -> 1"))
             ),
             // ),
             // Strategy.AnyMatch(rules.r("if x y y -> y")),
@@ -127,13 +140,13 @@ public class BoolStrategyProvider extends StrategyProvider {
             //identity
             Strategy.Any(
                 Strategy.AnyMatch(rules.r("0 and x -> 0")),
-                Strategy.AnyMatch(rules.r("x and 0 -> 0")),
+                // Strategy.AnyMatch(rules.r("x and 0 -> 0")),
                 Strategy.AnyMatch(rules.r("1 and x -> x")),
-                Strategy.AnyMatch(rules.r("x and 1 -> x")),
+                // Strategy.AnyMatch(rules.r("x and 1 -> x")),
                 Strategy.AnyMatch(rules.r("0 or x -> x")),
-                Strategy.AnyMatch(rules.r("x or 0 -> x")),
+                // Strategy.AnyMatch(rules.r("x or 0 -> x")),
                 Strategy.AnyMatch(rules.r("1 or x -> 1")),
-                Strategy.AnyMatch(rules.r("x or 1 -> 1")),
+                // Strategy.AnyMatch(rules.r("x or 1 -> 1")),
                 Strategy.AnyMatch(rules.r("not 0 -> 1")),
                 Strategy.AnyMatch(rules.r("not 1 -> 0"))
             ),
@@ -146,6 +159,8 @@ public class BoolStrategyProvider extends StrategyProvider {
                 Strategy.AnyMatch(rules.r("not x or not y -> not (x and y)"))
             )
         ));
+
+        axioms.set(this.getCommutativeFuncs());
 
         // Strategy.Fixpoint(
         //     Strategy.FirstMatch(
@@ -215,7 +230,7 @@ public class BoolStrategyProvider extends StrategyProvider {
         //     Strategy.AnyMatch(rules.r("not x or not y -> not (x and y)"))
         // );
         tranPropag = Strategy.On(
-            Strategy.Depth(14, reduce),
+            Strategy.Depth(10, reduce),
             Strategy.MissingERC(BusBit::testPresense, "n", 
                 Strategy.Any(
                     Strategy.AnyMatch(rules.r("x -> (n or not n) and x")),
@@ -239,18 +254,20 @@ public class BoolStrategyProvider extends StrategyProvider {
                         Strategy.AnyMatch(rules.r("not x or not y -> not (x and y)")),
 
                         Strategy.AnyMatch(rules.r("(y or z) and x -> (y and x) or (z and x)")),
-                        Strategy.AnyMatch(rules.r("x and (y or z) -> (x and y) or (x and z)")),  
+                        // Strategy.AnyMatch(rules.r("x and (y or z) -> (x and y) or (x and z)")),  
                         Strategy.AnyMatch(rules.r("(y and z) or x -> (y or x) and (z or x)")),
-                        Strategy.AnyMatch(rules.r("x or (y and z) -> (x or y) and (x or z)")),
+                        // Strategy.AnyMatch(rules.r("x or (y and z) -> (x or y) and (x or z)")),
                         //assoc                         
                         Strategy.AnyMatch(rules.r("x or (y or z) -> (x or y) or z")),
-                        Strategy.AnyMatch(rules.r("x and (y and z) -> (x and y) and z")),
-                        Strategy.AnyMatch(rules.r("(x or y) or z -> x or (y or z)")),
-                        Strategy.AnyMatch(rules.r("(x and y) and z -> x and (y and z)"))
+                        Strategy.AnyMatch(rules.r("x and (y and z) -> (x and y) and z"))
+                        // Strategy.AnyMatch(rules.r("(x or y) or z -> x or (y or z)")),
+                        // Strategy.AnyMatch(rules.r("(x and y) and z -> x and (y and z)"))
                     )
                 )
             )
         );
+
+        tranPropag.set(this.getCommutativeFuncs());
 
         // Strategy.NTimesMax(5, 
         //     Strategy.Any(    
@@ -392,8 +409,14 @@ public class BoolStrategyProvider extends StrategyProvider {
             case "reduce": return reduce;
             case "axioms": return axioms;
             case "tranPropag": return tranPropag;
+            case "reduceOnDepth": return reduceOnDepth;
             default: return null;
         }
     }
+
+    @Override
+    public Set<Class<?>> getCommutativeFuncs() {
+        return Set.of(And.class, Or.class);
+    }    
     
 }

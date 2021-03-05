@@ -19,26 +19,33 @@ import ec.EvolutionState;
 import ec.display.EvolutionStateEvent;
 import ec.gp.ERC;
 import ec.gp.GPNode;
+import ec.gp.GPNodeParent;
 import ec.gp.GPTree;
-import ec.gp.transform.Transform.ReplaceFailed;
 import ec.util.MersenneTwisterFast;
 import ec.util.Output;
 
 public abstract class Strategy {
 
+    public static class ReplaceFailed extends Exception {
+        private static final long serialVersionUID = 1L;        
+    }    
+
     protected Consumer<String> logger = msg -> {};
     protected StrategyStats stats = null;
     protected Map<GPNode, GPNode> externalContext = null;
+    protected Set<Class<?>> commutativeFuncs;
 
     public static class TransformApplication {
-        final public Transform transform; 
-        final public GPNode orig; 
-        final public GPNode replacement; 
+        final public Transform transform;
+        final public GPNode orig;
+        final public GPNode replacement;
+
         public TransformApplication(Transform transform, GPNode orig, GPNode replacement) {
             this.transform = transform;
             this.orig = orig;
             this.replacement = replacement;
         }
+
         public void printTransform(EvolutionState state, int log) {
             state.output.println(this.transform.name + ":", log, true);
             orig.printRootedTreeForHumans(state, log, 0, 0);
@@ -52,7 +59,7 @@ public abstract class Strategy {
         public List<TransformApplication> appliedTransform;
         public GPNode gpNode;
 
-        public StrategyResult(GPNode gpNode) { //original node on which strategy is applied 
+        public StrategyResult(GPNode gpNode) { // original node on which strategy is applied
             this.appliedTransform = new ArrayList<TransformApplication>();
             this.gpNode = gpNode;
         }
@@ -60,6 +67,7 @@ public abstract class Strategy {
 
     public static class StrategyStats {
         public Map<String, Integer> stats = new HashMap<>();
+
         void add(String transform) {
             stats.put(transform, stats.getOrDefault(transform, 0) + 1);
         }
@@ -75,19 +83,25 @@ public abstract class Strategy {
 
     public void set(Map<GPNode, GPNode> externalContext) {
         this.externalContext = externalContext;
-    }  
+    }
 
-    public void set(Consumer<String> logger, StrategyStats stats, Map<GPNode, GPNode> externalContext) {
-        set(logger); set(stats); set(externalContext);
+    public void set(Set<Class<?>> commutativeFuncs) {
+        this.commutativeFuncs = commutativeFuncs;
+
+    }
+
+    public void set(Consumer<String> logger, StrategyStats stats, Map<GPNode, GPNode> externalContext,
+        Set<Class<?>> commutativeFuncs) {
+        set(logger); set(stats); set(externalContext); set(commutativeFuncs);
     }          
     //defines a way how to apply transforms 
-    public StrategyResult apply(GPNode i, EvolutionState state, int thread) throws Transform.ReplaceFailed {
+    public StrategyResult apply(GPNode i, EvolutionState state, int thread) throws ReplaceFailed {
         StrategyResult res = new StrategyResult(i);
         apply(state, thread, res);
         return res;
     }
-    public abstract void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed;
-    // public StrategyResult apply(GPNode i, MersenneTwisterFast rand, Consumer<String> logger) throws Transform.ReplaceFailed {
+    public abstract void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed;
+    // public StrategyResult apply(GPNode i, MersenneTwisterFast rand, Consumer<String> logger) throws ReplaceFailed {
     //     StrategyResult res = this.apply(i, rand);
     //     // logger.accept();
     // }
@@ -115,14 +129,20 @@ public abstract class Strategy {
         public void set(Map<GPNode, GPNode> context) {
             super.set(context);
             Arrays.stream(strategies).forEach(s -> s.set(context));
-        }          
+        }
+
+        @Override 
+        public void set(Set<Class<?>> commutativeFuncs) {
+            super.set(commutativeFuncs);
+            Arrays.stream(strategies).forEach(s -> s.set(commutativeFuncs));
+        }
 
     }
 
     public static Strategy All(Strategy... strategies) {
         return new StrategyCollection(strategies) {
             @Override
-            public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed{
+            public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed{
                 for (Strategy s: strategies) {
                     s.apply(state, thread, res);
                 }
@@ -133,7 +153,7 @@ public abstract class Strategy {
     public static Strategy First(Strategy... strategies) {
         return new StrategyCollection(strategies) {
             @Override
-            public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {
+            public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {
                 for (Strategy s: strategies) {
                     s.apply(state, thread, res);
                     if (res.appliedTransform.size() > 0) break;
@@ -153,7 +173,7 @@ public abstract class Strategy {
     //     }
     
     //     @Override
-    //     public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {
+    //     public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {
     //         if (state.random[thread].nextDouble() < prob)
     //             strategy.apply(state, thread, res);
     //     }    
@@ -174,7 +194,7 @@ public abstract class Strategy {
     //     }
     
     //     @Override
-    //     public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {
+    //     public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {
     //         if (pred.test(res.gpNode))
     //             strategy.apply(state, thread, res);
     //     }    
@@ -187,7 +207,7 @@ public abstract class Strategy {
     public static Strategy Fixpoint(Strategy... other) {
         return new StrategyCollection(other){
             @Override
-            public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {    
+            public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {    
                 StrategyResult innerRes = new StrategyResult(res.gpNode);
                 while (true) {                
                     innerRes.appliedTransform.clear();
@@ -204,7 +224,7 @@ public abstract class Strategy {
     public static Strategy Any(Strategy... other) {
         return new StrategyCollection(other) {
             @Override
-            public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {    
+            public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {    
                 List<Strategy> awailable = new ArrayList<>(List.of(strategies));
                 while (awailable.size() > 0) {
                     Strategy str = awailable.get(state.random[thread].nextInt(awailable.size()));
@@ -254,13 +274,13 @@ public abstract class Strategy {
                 reaction.set(Map.of(Nodes.Any(newName), created.get()));
             }
             return created.isPresent();
-        }, reaction);
+        }, reaction, true);
     }
 
     private static StrategyCollection Id(Strategy strategy) {
         return new StrategyCollection(strategy){
             @Override
-            public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {   
+            public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {   
                 if (strategies[0] != null)
                     strategies[0].apply(state, thread, res);
             }
@@ -318,7 +338,7 @@ public abstract class Strategy {
     }
 
     public static Strategy On(Case... cases) { //for now work with stats is hardcoded 
-        return new Strategy() {
+        return new StrategyCollection(Arrays.stream(cases).map(c -> c.reaction).toArray(i -> new Strategy[i])) {
             @Override
             public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {
                 TreeStats stats = TreeStats.collectFor(res.gpNode);
@@ -362,7 +382,7 @@ public abstract class Strategy {
     //         this.prob = prob;
     //     }
 
-    //     public GPNode matchReplace(GPNode ast, MersenneTwisterFast rand, StrategyResult res) throws Transform.ReplaceFailed {
+    //     public GPNode matchReplace(GPNode ast, MersenneTwisterFast rand, StrategyResult res) throws ReplaceFailed {
     //         //returns binding of Any nodes to some subnodes on match             
     //         if (rand.nextDouble() < this.prob) { //replace 
     //             //treesEquivalent(this.pattern, ast, bindings)
@@ -381,7 +401,7 @@ public abstract class Strategy {
     //                 value = t.replace(value, m.bindings, ast.parent, ast.argposition);
     //                 // value.parent = match.matched.parent;
     //                 if (!Transform.validate(value))
-    //                     throw new Transform.ReplaceFailed();
+    //                     throw new ReplaceFailed();
     //                 if (ast.parent instanceof GPNode) {
     //                     ((GPNode)ast.parent).children[ast.argposition] = value; 
     //                     // return value; 
@@ -401,7 +421,7 @@ public abstract class Strategy {
     //     }
         
     //     @Override
-    //     public void apply(MersenneTwisterFast rand, StrategyResult res) throws Transform.ReplaceFailed {
+    //     public void apply(MersenneTwisterFast rand, StrategyResult res) throws ReplaceFailed {
     //         //default implementation applies transform to random match 
     //         this.matchReplace(res.gpNode, rand, res); //, matches);
     //     }
@@ -437,7 +457,77 @@ public abstract class Strategy {
     //     return new AnyMatch(rule);
     // }
 
-    private static class AnyMatch extends Strategy {
+    public static abstract class TransformApplier extends Strategy {
+        private GPNode replace(GPNode target, Map<GPNode, GPNode> bindings, GPNodeParent parent, int argpos) {        
+            if (bindings.containsKey(target)) {
+                GPNode res = (GPNode)bindings.get(target).clone();
+                res.parent = parent;
+                res.argposition = (byte)argpos;
+                return res;
+            }
+            for (int i = 0; i < target.children.length; i++) {            
+                GPNode res = replace(target.children[i], bindings, target, i);
+                target.children[i] = res; 
+                res.parent = target;
+            }
+            target.argposition = (byte)argpos;
+            target.parent = parent;
+            return target;
+        }
+
+        private GPNode gen(EvolutionState state, int thread, GPNode rewrite, Map<GPNode, GPNode> bindings, GPNodeParent parent, int argpos) {
+            if (rewrite instanceof Nodes.Gen) {
+                GPNode res = ((Nodes.Gen)rewrite).create(state, thread);            
+                res.parent = parent;
+                res.argposition = (byte)argpos;
+                bindings.put(Nodes.Any(rewrite.toString()), res);
+                return res;
+            }
+            for (int i = 0; i < rewrite.children.length; i++) {            
+                GPNode res = gen(state, thread, rewrite.children[i], bindings, rewrite, i);
+                rewrite.children[i] = res; 
+                res.parent = rewrite;
+            }
+            rewrite.argposition = (byte)argpos;
+            rewrite.parent = parent;
+            return rewrite;    
+        }
+        
+        private boolean validate(GPNode node) {
+            if (node instanceof Nodes.MetaNamed) {
+                return false; 
+            }
+            for (GPNode child: node.children)
+                if (!validate(child))
+                    return false; 
+            return true; 
+        }
+
+        public GPNode replace(GPNode replacement, EvolutionState state, int thread, Match match, Map<GPNode, GPNode> external) throws ReplaceFailed {
+            GPNode value = (GPNode)replacement.clone();
+            Map<GPNode, GPNode> bindings = match.bindings;
+            if (external != null && external.size() > 0) {
+                bindings.putAll(external);
+            }
+            value = gen(state, thread, value, bindings, null, 0); //should remove all Gen
+            value = replace(value, bindings, match.matched.parent, match.matched.argposition);
+            // value.parent = match.matched.parent;
+            if (!validate(value))
+                throw new ReplaceFailed();
+            if (match.matched.parent instanceof GPNode) {
+                ((GPNode)match.matched.parent).children[match.matched.argposition] = value; 
+                return value; 
+            } else if (match.matched.parent instanceof GPTree) {
+                ((GPTree)match.matched.parent).child = value;             
+                return value; 
+            }
+            throw new ReplaceFailed();
+        }    
+
+        // public abstract List<Match> matchPattern(Transform pattern, GPNode ast);
+    }
+
+    private static class AnyMatch extends TransformApplier {
 
         private Transform[] transforms;
 
@@ -453,27 +543,44 @@ public abstract class Strategy {
                     this.stats.stats.put(t.name, 0);
             }
         }
+        
+        private void matches(Transform t, GPNode ast, List<Match> m, MersenneTwisterFast rand) {
+            //returns binding of Any nodes to some subnodes on match 
+            Map<GPNode, GPNode> bindings = new HashMap<GPNode, GPNode>();
+            if (Transform.unify(t.pattern, ast, this.commutativeFuncs, bindings, rand)) {
+                m.add(new Match(t, ast, bindings)); 
+            }
+            for (GPNode child: ast.children) {
+                matches(t, child, m, rand);
+            }
+        }
+
+        // public List<Match> matchPattern(Transform t, GPNode ast) {
+        //     List<Match> m = new ArrayList<Match>();
+        //     matches(t, ast, m);
+        //     return m;
+        // }    
 
         @Override
-        public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {
+        public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {
             //default implementation applies transform to random match 
-            List<Transform.Match> matches = new ArrayList<>();
+            List<Match> matches = new ArrayList<>();
             for (Transform t: transforms) {
-                List<Transform.Match> localMatches = new ArrayList<>();
+                List<Match> localMatches = new ArrayList<>();
                 // logger.accept(String.format("[%s]", t.name));
-                t.matches(res.gpNode, localMatches);
+                matches(t, res.gpNode, localMatches, state.random[thread]);
                 matches.addAll(localMatches);  
                 if (localMatches.size() > 0) {
                     logger.accept(String.format("[%s] %d matches", t.name, localMatches.size()));           
                 }
             }
             while (matches.size() > 0) {
-                Transform.Match selectedRewrite = matches.get(state.random[thread].nextInt(matches.size()));                 
+                Match selectedRewrite = matches.get(state.random[thread].nextInt(matches.size()));                 
                 Map<GPNode, Integer> depthes = selectedRewrite.bindings.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().depth()));
                 int depth = Transform.getDepthOfRewrite(selectedRewrite.transform.rewrite, depthes);
                 if (depth <= 12) { //constant here for now - TODO: refactor to selection strategy                 
                     logger.accept(String.format("selected [%s]", selectedRewrite.transform.name)); 
-                    GPNode newChild = selectedRewrite.transform.replace(state, thread, selectedRewrite, this.externalContext);
+                    GPNode newChild = this.replace(selectedRewrite.transform.rewrite, state, thread, selectedRewrite, this.externalContext);
                     if (res.gpNode.equals(selectedRewrite.matched))
                         res.gpNode = newChild;                    
                     res.appliedTransform.add(new TransformApplication(selectedRewrite.transform, selectedRewrite.matched, newChild));
@@ -552,7 +659,7 @@ public abstract class Strategy {
     public static  Strategy NTimesMax(int max, Strategy s) {
         return new StrategyCollection(s) {
             @Override
-            public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {
+            public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {
                 int times = (max <= 1) ? 0 : state.random[thread].nextInt(max);
                 for (int i = 0; i <= times; i++) {
                     strategies[0].apply(state, thread, res);
@@ -561,21 +668,34 @@ public abstract class Strategy {
         };
     }
 
-    private static class FirstMatch extends Strategy {
+    private static class FirstMatch extends TransformApplier {
 
         private Transform[] rules;
 
         public FirstMatch(Transform... rules) {
             this.rules = rules;
-        }
+        }           
+
+        private Match firstTopDownMatch(Transform t, GPNode ast, MersenneTwisterFast rand) {
+            Map<GPNode, GPNode> bindings = new HashMap<GPNode, GPNode>();
+            if (Transform.unify(t.pattern, ast, this.commutativeFuncs, bindings, rand)) {
+                return new Match(t, ast, bindings);
+            }
+            for (GPNode child: ast.children) {
+                Match res = firstTopDownMatch(t, child, rand);
+                if (res != null)
+                    return res; 
+            }
+            return null;
+        }            
 
         @Override
-        public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {
+        public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {
             for (Transform rule: rules) {
-                Transform.Match firstMatch = rule.firstMatch(res.gpNode);
+                Match firstMatch = firstTopDownMatch(rule, res.gpNode, state.random[thread]);
                 if (firstMatch == null)
                     continue;
-                GPNode newChild = firstMatch.transform.replace(state, thread, firstMatch, this.externalContext);
+                GPNode newChild = this.replace(firstMatch.transform.rewrite, state, thread, firstMatch, this.externalContext);
                 if (res.gpNode.equals(firstMatch.matched))
                     res.gpNode = newChild;
                 res.appliedTransform.add(new TransformApplication(firstMatch.transform, firstMatch.matched, newChild));                
@@ -599,7 +719,7 @@ public abstract class Strategy {
 	// 	}
 
 	// 	@Override
-    //     public void apply(EvolutionState state, int thread, StrategyResult res) throws Transform.ReplaceFailed {    
+    //     public void apply(EvolutionState state, int thread, StrategyResult res) throws ReplaceFailed {    
     //         if (state.random[thread].nextDouble() < prob) 
     //             forward.apply(state, thread, res);
     //         else 
