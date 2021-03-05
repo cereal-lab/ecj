@@ -77,6 +77,8 @@ import java.util.*;
 
 public abstract class Species implements Prototype
     {
+    private static final long serialVersionUID = 1;
+
     public static final String P_INDIVIDUAL = "ind";
     public static final String P_PIPE = "pipe";
     public static final String P_FITNESS = "fitness";
@@ -232,7 +234,7 @@ public abstract class Species implements Prototype
      */
     public void updateIndividual(final EvolutionState state, final Individual ind)
         {
-            // Do nothing by default
+        // Do nothing by default
         }
 
     /**
@@ -243,7 +245,7 @@ public abstract class Species implements Prototype
      */
     public void updateSubpopulation(final EvolutionState state, final Subpopulation subpop)
         {
-            // Do nothing by default
+        // Do nothing by default
         }
     }
 

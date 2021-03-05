@@ -49,13 +49,15 @@ public class SPEA2BreederTest
         state.breedthreads = 1;
         state.output = Evolve.buildOutput();
         state.output.setThrowsErrors(true);
+        state.output.getLog(0).silent = true;
+        state.output.getLog(1).silent = true;
         state.parameters = new ParameterDatabase();
         state.parameters.set(new Parameter(Initializer.P_POP).push(Population.P_SIZE), "1");
         //state.parameters.set(new Parameter(Initializer.P_POP).push(Population.P_SUBPOP).push("0").push(Subpopulation.P_SUBPOPSIZE), "20");
         state.parameters.set(BASE.push(SPEA2Breeder.P_ELITE).push("0"), "10");
         state.parameters.set(FITNESS_BASE.push(MultiObjectiveFitness.P_NUMOBJECTIVES), "2");
-        state.parameters.set(FITNESS_BASE.push(MultiObjectiveFitness.P_MAXOBJECTIVES).push("0"), "100");
-        state.parameters.set(FITNESS_BASE.push(MultiObjectiveFitness.P_MAXOBJECTIVES).push("1"), "0.5");
+        state.parameters.set(FITNESS_BASE.push(MultiObjectiveFitness.P_MAXOBJECTIVE).push("0"), "100");
+        state.parameters.set(FITNESS_BASE.push(MultiObjectiveFitness.P_MAXOBJECTIVE).push("1"), "0.5");
         state.random = new MersenneTwisterFast[] { new MersenneTwisterFast() }; // PRNG is used for an internal algorithm, but the result is deterministic.
         p_fitness = new SPEA2MultiObjectiveFitness();
         p_fitness.setup(state, FITNESS_BASE);
@@ -454,9 +456,12 @@ public class SPEA2BreederTest
         final ParameterDatabase params = new ParameterDatabase(new File("src/main/resources/ec/app/moosuite/zdt6.params"));
         final ParameterDatabase spea2_params = new ParameterDatabase(new File("src/main/resources/ec/app/moosuite/spea2.params"));
         params.prependParent(spea2_params);
+        params.set(new Parameter("silent"), "true");
         
         final EvolutionState state = Evolve.initialize(params, 10000);
         state.startFresh(); // Set up the initial population and stuff
+        state.output.getLog(0).silent = true;
+        state.output.getLog(1).silent = true;
         assertEquals(150, state.population.subpops.get(0).individuals.size());
         state.evolve(); // Run one generation
         assertEquals(150, state.population.subpops.get(0).individuals.size());

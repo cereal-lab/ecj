@@ -6,7 +6,6 @@
 
 
 package ec;
-import ec.util.ParamClassLoadException;
 import ec.util.Parameter;
 import ec.eval.MasterProblem;
 
@@ -54,6 +53,8 @@ import ec.eval.MasterProblem;
 
 public abstract class Evaluator implements Singleton
     {
+    private static final long serialVersionUID = 1;
+
     public static final String P_PROBLEM = "problem";
 
     public Problem p_problem;
@@ -94,6 +95,7 @@ public abstract class Evaluator implements Singleton
                     base.push(P_MASTERPROBLEM),null,Problem.class));
             masterproblem.setup(state,base.push(P_MASTERPROBLEM));
 
+            masterproblem.problem = p_problem;
             if (!state.parameters.getBoolean(base.push(P_IAMSLAVE),null,false))  // I am a master (or possibly a slave -- same params)
                 {
                 
@@ -107,7 +109,6 @@ public abstract class Evaluator implements Singleton
                  * evaluator and the real problem.  This allows seamless use
                  * of the master problem.
                  */
-                masterproblem.problem = p_problem;
                 p_problem = masterproblem;
                 //     }
                 // catch(ParamClassLoadException e)

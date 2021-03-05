@@ -425,16 +425,16 @@ public class IslandExchange extends Exchanger
                     { Output.initialError(
                             "A File Not Found Exception was generated upon" +
                             "reading the parameter file \"" + args[x+1] + 
-                            "\".\nHere it is:\n" + e); }
+                            "\".\nHere it is:\n" + e, true); }
                 catch(IOException e)
                     { Output.initialError(
                             "An IO Exception was generated upon reading the" +
                             "parameter file \"" + args[x+1] +
-                            "\".\nHere it is:\n" + e); } 
+                            "\".\nHere it is:\n" + e, true); } 
                 }
         if (parameters==null)
             Output.initialError(
-                "No parameter file was specified." ); 
+                "No parameter file was specified.", true); 
 
         // 1. create the output
         //store = (parameters.getBoolean(new Parameter(Evolve.P_STORE),null,false));
@@ -662,6 +662,7 @@ public class IslandExchange extends Exchanger
             mailbox = new IslandExchangeMailbox( state, clientPort, fromServer.readInt(),
                 fromServer.readInt(), ownId, chatty, compressedCommunication );
             mailboxThread = new Thread( mailbox );
+            mailboxThread.setDaemon(true);
             mailboxThread.start();
 
             // record that the mailbox has been created
@@ -2265,6 +2266,7 @@ class IslandExchangeServer implements Runnable
     public Thread spawnThread()
         {
         Thread thread = new Thread( this );
+        thread.setDaemon(true);
         thread.start();
         return thread;
         }

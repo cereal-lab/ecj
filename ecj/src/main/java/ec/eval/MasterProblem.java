@@ -142,7 +142,7 @@ public class MasterProblem extends Problem implements SimpleProblemForm, Grouped
     // prepare for a batch of evaluations
     public void prepareToEvaluate(final EvolutionState state, final int threadnum)
         {
-        if (jobSize > 1) queue = new ArrayList();
+        if (jobSize > 1) queue = new ArrayList<>();
         batchMode = true;
         }
 
@@ -174,10 +174,9 @@ public class MasterProblem extends Problem implements SimpleProblemForm, Grouped
         }
         
         
-    ArrayList queue;
+    ArrayList<QueueIndividual> queue;
     void flush(EvolutionState state, int threadnum)
         {
-        int subpopulation;
         if (queue!=null && queue.size() > 0 )
             {
             Individual[] inds = new Individual[queue.size()];
@@ -190,7 +189,7 @@ public class MasterProblem extends Problem implements SimpleProblemForm, Grouped
                 }
             evaluate(state, inds, subpopulations, threadnum);
             }
-        queue = new ArrayList();
+        queue = new ArrayList<>();
         }
 
 
@@ -335,7 +334,14 @@ public class MasterProblem extends Problem implements SimpleProblemForm, Grouped
         receiveAdditionalData() and transferAdditionalData(). */
     public void sendAdditionalData(EvolutionState state, DataOutputStream dataOut)
         {
-        // do nothing
+        if (problem == null)
+            {
+            state.output.warning("Cannot call Problem.sendAdditionalData(...) because MasterProblem's problem is currently null.");
+            }
+        else
+            {
+            problem.sendAdditionalData(state, dataOut);
+            }
         }
 
     /** This method is called on a MasterProblem by the Slave.  You should use this method to store away
@@ -346,7 +352,14 @@ public class MasterProblem extends Problem implements SimpleProblemForm, Grouped
         on it for any other purpose (including access of the random number generator or storing any data).  */
     public void receiveAdditionalData(EvolutionState state, DataInputStream dataIn)
         {
-        // do nothing
+        if (problem == null)
+            {
+            state.output.warning("Cannot call Problem.receiveAdditionalData(...) because MasterProblem's problem is currently null.");
+            }
+        else
+            {
+            problem.receiveAdditionalData(state, dataIn);
+            }
         }
 
     /** This method is called by a Slave to transfer data previously loaded via receiveAdditionalData() to
@@ -354,7 +367,14 @@ public class MasterProblem extends Problem implements SimpleProblemForm, Grouped
         EvolutionStates are created. By default this method does nothing, which is the usual situation. */
     public void transferAdditionalData(EvolutionState state)
         {
-        // do nothing
+        if (problem == null)
+            {
+            state.output.warning("Cannot call Problem.transferAdditionalData(...) because MasterProblem's problem is currently null.");
+            }
+        else
+            {
+            problem.transferAdditionalData(state);
+            }
         }
 
     @Override

@@ -468,18 +468,17 @@ public class Output implements Serializable
 
     /** Prints an initial error to System.err.  This is only to
         be used by ec.Evolve in starting up the system. */
-    public static void initialError(String s)
+    public static void initialError(String s, boolean throwsErrors)
         {
         String er = "STARTUP ERROR:\n" + s;
         System.err.println(er);
 
-        //System.exit(1);
-        exitWithError(null, er, false);
+        exitWithError(null, er, throwsErrors);
         }
 
     /** Prints an initial error to System.err.  This is only to
         be used by ec.Evolve in starting up the system. */
-    public static void initialError(String s, Parameter p1)
+    public static void initialError(String s, Parameter p1, boolean throwsErrors)
         {
         String er = "STARTUP ERROR:\n" + s;
         System.err.println(er);
@@ -489,13 +488,12 @@ public class Output implements Serializable
             System.err.println("PARAMETER: " + p1);
             }
 
-        //System.exit(1);
-        exitWithError(null, er, false);
+        exitWithError(null, er, throwsErrors);
         }
 
     /** Prints an initial error to System.err.  This is only to
         be used by ec.Evolve in starting up the system. */
-    public static void initialError(String s, Parameter p1, Parameter p2)
+    public static void initialError(String s, Parameter p1, Parameter p2, boolean throwsErrors)
         {
         String er = "STARTUP ERROR:\n" + s;
         System.err.println(er);
@@ -511,8 +509,7 @@ public class Output implements Serializable
             System.err.println("     ALSO: " + p2);
             }
 
-        //System.exit(1);
-        exitWithError(null, er, false);
+        exitWithError(null, er, throwsErrors);
         }
 
     /** Prints an initial message to System.err.  This is only to
@@ -914,13 +911,15 @@ public class Output implements Serializable
      * your system, this method will return null. */
     public static InputStream makeCompressingInputStream(InputStream in)
         {
-        // to do this, we're going to use reflection.  But here's the equivalent code:
+        // We're going to use reflection here, because we want to be able to compile even if users don't have JZlib on
+        // their system.  But here's the equivalent code:
         /*
           return new com.jcraft.jzlib.ZInputStream(in);
         */
         try
             {
-            return (InputStream)(Class.forName("com.jcraft.jzlib.ZInputStream").getConstructor(new Class[] { InputStream.class } ).newInstance(new Object[] { in }));
+            return (InputStream)(Class.forName("com.jcraft.jzlib.InflaterInputStream").getConstructor(new Class[] { InputStream.class } ).newInstance(new Object[] { in }));
+            //return (InputStream)(Class.forName("com.jcraft.jzlib.ZInputStream").getConstructor(new Class[] { InputStream.class } ).newInstance(new Object[] { in }));
             }
         // just in case of RuntimeExceptions
         catch (Exception e) { return null; }  // failed, probably doesn't have JZLib on the system
@@ -930,11 +929,12 @@ public class Output implements Serializable
      * your system, this method will return null. */
     public static OutputStream makeCompressingOutputStream(OutputStream out)
         {
-        // to do this, we're going to use reflection.  But here's the equivalent code:
+        // We're going to use reflection here, because we want to be able to compile even if users don't have JZlib on
+        // their system.  But here's the equivalent code:
         /*
-            com.jcraft.jzlib.DeflaterOutputStream stream = new com.jcraft.jzlib.DeflaterOutputStream(out);
-            stream.setSyncFlush(true);
-            return stream;
+          com.jcraft.jzlib.DeflaterOutputStream stream = new com.jcraft.jzlib.DeflaterOutputStream(out);
+          stream.setSyncFlush(true);
+          return stream;
         */
 
         try
@@ -945,7 +945,22 @@ public class Output implements Serializable
             return (OutputStream) outi;
             }
         // just in case of RuntimeExceptions
-        catch (Exception e) { return null; } // failed, probably doesn't have JZLib on the system
+        catch (Exception e) 
+            { 
+            try
+                {
+                Class outz = Class.forName("com.jcraft.jzlib.JZlib");
+                int Z_BEST_SPEED = outz.getField("Z_BEST_SPEED").getInt(null);
+                int Z_SYNC_FLUSH = outz.getField("Z_SYNC_FLUSH").getInt(null);
+                        
+                Class outc = Class.forName("com.jcraft.jzlib.ZOutputStream");
+                Object outi = outc.getConstructor(new Class[] { OutputStream.class, Integer.TYPE }).newInstance(new Object[] { out, Integer.valueOf(Z_BEST_SPEED) });
+                outc.getMethod("setFlushMode", new Class[] { Integer.TYPE }).invoke(outi, new Object[] { new Integer(Z_SYNC_FLUSH) });
+                return (OutputStream) outi;
+                }
+            catch (Exception e2)
+                { return null; } // failed, probably doesn't have JZLib on the system
+            }
         }
 
 

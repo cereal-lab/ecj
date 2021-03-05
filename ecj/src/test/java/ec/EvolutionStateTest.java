@@ -44,12 +44,14 @@ public class EvolutionStateTest
         params.set(new Parameter(EvolutionState.P_BREEDER), "ec.test.StubBreeder");
         params.set(new Parameter(EvolutionState.P_EVALUATOR), "ec.test.StubEvaluator");
         params.set(new Parameter(EvolutionState.P_STATISTICS), "ec.test.TestStatistics");
-        params.set(new Parameter(EvolutionState.P_STATISTICS).push(TestStatistics.P_STATISTICS_FILE), "/dev/null");
+        params.set(new Parameter(EvolutionState.P_STATISTICS).push(TestStatistics.P_STATISTICS_FILE), System.getProperty("java.io.tmpdir") + System.getProperty("file.separator") + "out.txt");
         params.set(new Parameter(EvolutionState.P_EXCHANGER), "ec.test.StubExchanger");
         instance = new EvolutionState();
         instance.parameters = params;
         instance.output = Evolve.buildOutput();
         instance.output.setThrowsErrors(true);
+        instance.output.getLog(0).silent = true;
+        instance.output.getLog(1).silent = true;
         instance.random = new MersenneTwisterFast[] {};
         instance.evalthreads = 1;
     }
@@ -57,7 +59,6 @@ public class EvolutionStateTest
     @Test
     public void testSetup()
     {
-        System.out.println("setup");
         instance.setup(instance, null);
         assertEquals(instance.checkpointModulo, 1);
         assertEquals(instance.checkpointPrefix, "ec");

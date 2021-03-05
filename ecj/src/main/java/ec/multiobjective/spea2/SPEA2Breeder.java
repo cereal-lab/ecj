@@ -27,6 +27,7 @@ import java.util.*;
 
 public class SPEA2Breeder extends SimpleBreeder
     {
+    private static final long serialVersionUID = 1;
     public final static String P_K = "k";
     public final static String P_NORMALIZE = "normalize-fitnesses";
     
@@ -89,7 +90,7 @@ public class SPEA2Breeder extends SimpleBreeder
         if (elite[subpopulation] != NOT_SET)
             {
             if (elite[subpopulation] > referencePop.subpops.get(subpopulation).individuals.size())
-            state.output.error("The number of elites for subpopulation " + subpopulation + " exceeds the actual size of the subpopulation");
+                state.output.error("The number of elites for subpopulation " + subpopulation + " exceeds the actual size of the subpopulation");
             return elite[subpopulation];
             }
         else if (eliteFrac[subpopulation] == 0)

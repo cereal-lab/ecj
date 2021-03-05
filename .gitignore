@@ -2,7 +2,10 @@ ecj/nbproject
 ecj/nb-configuration.xml
 ecj/nbactions.xml
 ecj/target/
+*.class
 .idea/
+.vscode
+.DS_Store
 ecj.iml
 ecj/src/main/resources/ec/app/mona/0-MonaLisaOut.png
 ecj/src/main/resources/ec/app/mona/1-MonaLisaOut.png
@@ -23,3 +26,8 @@ ecj/src/main/resources/ec/app/mona/1-MonaLisaOut.png
 ecj/env/*
 data
 __pycache__
+manual.fls
+manual.ind
+manual.fdb_latexmk
+manual.ilg
+problem_err.txt

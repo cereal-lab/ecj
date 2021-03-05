@@ -9,7 +9,6 @@
 package ec;
 import java.util.*;
 import java.io.*;
-import java.lang.reflect.Array;
 
 import ec.util.*;
 
@@ -89,8 +88,6 @@ public class Subpopulation implements Cloneable, Setup
 
     /** The species for individuals in this subpopulation. */
     public Species species;
-
-    public IntBag[] parents;
         
     /** The subpopulation's individuals. */
     public ArrayList<Individual> individuals;
@@ -274,9 +271,9 @@ public class Subpopulation implements Cloneable, Setup
             }
 
         // populating the remainder with random individuals
-        HashMap h = null;
+        HashMap<Individual, Individual> h = null;
         if (numDuplicateRetries >= 1)
-            h = new HashMap((len - start) / 2);  // seems reasonable
+            h = new HashMap<>((len - start) / 2);  // seems reasonable
 
         for(int x=start;x<len;x++) 
             {

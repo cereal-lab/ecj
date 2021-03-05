@@ -163,7 +163,7 @@ public class Evolve
 
 
     /** Optionally prints the help message. */
-    public static void checkForHelp(String[] args) 
+    public static void checkForHelp(String[] args, String classname, boolean checkpoint) 
         {
         for(int x=0;x<args.length;x++)
             if (args[x].equals(A_HELP))
@@ -171,11 +171,11 @@ public class Evolve
                 Output.initialMessage(Version.message());
                 Output.initialMessage(
                     "Format:\n\n" + 
-                    "    java ec.Evolve -file FILE [-p PARAM=VALUE] [-p PARAM=VALUE] ...\n" +
-                    "    java ec.Evolve -from FILE [-p PARAM=VALUE] [-p PARAM=VALUE] ...\n" + 
-                    "    java ec.Evolve -from FILE -at CLASS [-p PARAM=VALUE] [-p PARAM=VALUE] ...\n" + 
-                    "    java ec.Evolve -checkpoint CHECKPOINT\n" + 
-                    "    java ec.Evolve -help\n\n" +
+                    "    java " + classname + " -file FILE [-p PARAM=VALUE] [-p PARAM=VALUE] ...\n" +
+                    "    java " + classname + " -from FILE [-p PARAM=VALUE] [-p PARAM=VALUE] ...\n" + 
+                    "    java " + classname + " -from FILE -at CLASS [-p PARAM=VALUE] [-p PARAM=VALUE] ...\n" + 
+                    "    java " + classname + " -checkpoint CHECKPOINT\n" + 
+                    "    java " + classname + " -help\n\n" +
                     "-help                   Shows this message and exits.\n\n" +
                     "-file FILE              Launches ECJ using the provided parameter FILE.\n\n" +
                     "-from FILE              Launches ECJ using the provided parameter FILE\n" + 
@@ -195,7 +195,8 @@ public class Evolve
                     "                        file, setting it to the value VALUE instead.  You\n" + 
                     "                        can override as many parameters as you like on\n" + 
                     "                        the command line.\n\n" +
-                    "-checkpoint CHECKPOINT  Launches ECJ from the provided CHECKPOINT file.\n"
+                    (checkpoint ? 
+                    	"-checkpoint CHECKPOINT  Launches ECJ from the provided CHECKPOINT file.\n" : "")
                     );
                 System.exit(1);
                 }
@@ -214,7 +215,7 @@ public class Evolve
                     }
                 catch(Exception e)
                     {
-                    Output.initialError("An exception was generated upon starting up from a checkpoint.\nFor help, try:  java ec.Evolve -help\n\n" + e);
+                    Output.initialError("An exception was generated upon starting up from a checkpoint.\nFor help, try:  java ec.Evolve -help\n\n" + e, true);
                     }
                 }
         return null;  // should never happen
@@ -237,7 +238,7 @@ public class Evolve
                 catch(Exception e)
                     {
                     e.printStackTrace();
-                    Output.initialError("An exception was generated upon reading the parameter file \"" + args[x+1] + "\".\nHere it is:\n" + e); 
+                    Output.initialError("An exception was generated upon reading the parameter file \"" + args[x+1] + "\".\nHere it is:\n" + e, true); 
                     }
                     
         // search for a resource class (we may or may not use this)
@@ -247,7 +248,7 @@ public class Evolve
                 try
                     {
                     if (parameters != null)  // uh oh
-                        Output.initialError("Both -from and -at arguments provided.  This is not permitted.\nFor help, try:  java ec.Evolve -help");
+                        Output.initialError("Both -from and -at arguments provided.  This is not permitted.\nFor help, try:  java ec.Evolve -help", true);
                     else 
                         cls = Class.forName(args[x+1]);
                     break;
@@ -257,7 +258,7 @@ public class Evolve
                     e.printStackTrace();
                     Output.initialError(
                         "An exception was generated upon extracting the class to load the parameter file relative to: " + args[x+1] + 
-                        "\nFor help, try:  java ec.Evolve -help\n\n" + e);
+                        "\nFor help, try:  java ec.Evolve -help\n\n" + e, true);
                     }
                     
         // search for a resource (we may or may not use this)
@@ -266,7 +267,7 @@ public class Evolve
                 try
                     {
                     if (parameters != null)  // uh oh
-                        Output.initialError("Both -file and -from arguments provided.  This is not permitted.\nFor help, try:  java ec.Evolve -help");
+                        Output.initialError("Both -file and -from arguments provided.  This is not permitted.\nFor help, try:  java ec.Evolve -help", true);
                     else 
                         {
                         if (cls == null)  // no -at
@@ -280,11 +281,11 @@ public class Evolve
                     {
                     e.printStackTrace();
                     Output.initialError(
-                        "The parameter file is missing at the resource location: " + args[x+1] + " relative to the class: " + cls + "\n\nFor help, try:  java ec.Evolve -help");
+                        "The parameter file is missing at the resource location: " + args[x+1] + " relative to the class: " + cls + "\n\nFor help, try:  java ec.Evolve -help", true);
                     }
 
         if (parameters == null)
-            Output.initialError("No parameter or checkpoint file was specified.\nFor help, try:   java ec.Evolve -help" );
+            Output.initialError("No parameter or checkpoint file was specified.\nFor help, try:   java ec.Evolve -help", true);
         return parameters;
         }
     
@@ -372,14 +373,21 @@ public class Evolve
         }
 
 
-    /** Constructs and sets up an Output object. */
-    
+    /** Constructs and sets up an Output object which always issues errors in the traditional fashion rather than throwing them. */    
     public static Output buildOutput()
+		{
+		return buildOutput(false);
+		}
+		
+		
+    /** Constructs and sets up an Output object. */    
+    public static Output buildOutput(boolean throwsErrors)
         {
         Output output;
         // 1. create the output
 
         output = new Output(true);
+        output.setThrowsErrors(throwsErrors);
 
         // stdout is always log #0.  stderr is always log #1.
         // stderr accepts announcements, and both are fully verbose 
@@ -401,7 +409,7 @@ public class Evolve
                 
     public static EvolutionState initialize(ParameterDatabase parameters, int randomSeedOffset)
         {
-        return initialize(parameters, randomSeedOffset, buildOutput());
+        return initialize(parameters, randomSeedOffset, buildOutput(false));
         }
 
 
@@ -681,7 +689,7 @@ public class Evolve
         ParameterDatabase parameters;
         
         // should we print the help message and quit?
-        checkForHelp(args);
+        checkForHelp(args, "ec.Evolve", true);
                 
         // if we're loading from checkpoint, let's finish out the most recent job
         state = possiblyRestoreFromCheckpoint(args);
@@ -697,13 +705,13 @@ public class Evolve
             try
                 {
                 if (state.runtimeArguments == null)
-                    Output.initialError("Checkpoint completed from job started by foreign program (probably GUI).  Exiting...");
+                    Output.initialError("Checkpoint completed from job started by foreign program (probably GUI).  Exiting...", true);
                 args = state.runtimeArguments;                          // restore runtime arguments from checkpoint
                 currentJob = ((Integer)(state.job[0])).intValue() + 1;  // extract next job number
                 }
             catch (Exception e)
                 {
-                Output.initialError("EvolutionState's jobs variable is not set up properly.  Exiting...");
+                Output.initialError("EvolutionState's jobs variable is not set up properly.  Exiting...", true);
                 }
 
             state.run(EvolutionState.C_STARTED_FROM_CHECKPOINT);
@@ -720,11 +728,11 @@ public class Evolve
         if (currentJob == 0)  // no current job number yet
             currentJob = parameters.getIntWithDefault(new Parameter("current-job"), null, 0);
         if (currentJob < 0)
-            Output.initialError("The 'current-job' parameter must be >= 0 (or not exist, which defaults to 0)");
+            Output.initialError("The 'current-job' parameter must be >= 0 (or not exist, which defaults to 0)", true);
             
         int numJobs = parameters.getIntWithDefault(new Parameter("jobs"), null, 1);
         if (numJobs < 1)
-            Output.initialError("The 'jobs' parameter must be >= 1 (or not exist, which defaults to 1)");
+            Output.initialError("The 'jobs' parameter must be >= 1 (or not exist, which defaults to 1)", true);
                 
                 
         // Now we know how many jobs remain.  Let's loop for that many jobs.  Each time we'll

@@ -9,6 +9,7 @@ package ec.simple;
 import java.util.ArrayList;
 
 import ec.*;
+import ec.coevolve.GroupedProblemForm;
 import ec.util.*;
 
 /* 
@@ -22,9 +23,17 @@ import ec.util.*;
  * The SimpleEvaluator is a simple, non-coevolved generational evaluator which
  * evaluates every single member of every subpopulation individually in its
  * own problem space.  One Problem instance is cloned from p_problem for
- * each evaluating thread.  The Problem must implement SimpleProblemForm.
+ * each evaluating thread, and chunks of individuals are sent to each thread
+ * for evaluation.
+ * 
+ * The Problem must implement either SimpleProblemForm or GroupedProblemForm.  
+ * If a GroupedProblemForm is provided, then an entire chunk of individuals is 
+ * sent to the problem to be evaluated together in a batch.  If a SimpleProblemForm
+ * is provided, then each thread sends individuals sequentially to be evaluated
+ * one-at-a-time.
  *
  * @author Sean Luke
+ * @author Eric Scott
  * @version 2.0 
  *
  * Thanks to Ralf Buschermohle <lobequadrat@googlemail.com> for early versions
@@ -34,6 +43,8 @@ import ec.util.*;
 
 public class SimpleEvaluator extends Evaluator
     {
+    private static final long serialVersionUID = 1;
+    
     public static final String P_CLONE_PROBLEM = "clone-problem";
     public static final String P_NUM_TESTS = "num-tests";
     public static final String P_MERGE = "merge";
@@ -61,13 +72,9 @@ public class SimpleEvaluator extends Evaluator
         
     public ThreadPool pool = new ThreadPool();
 
-    // checks to make sure that the Problem implements SimpleProblemForm
     public void setup(final EvolutionState state, final Parameter base)
         {
         super.setup(state,base);
-        if (!(p_problem instanceof SimpleProblemForm))
-            state.output.fatal("" + this.getClass() + " used, but the Problem is not of SimpleProblemForm",
-                base.push(P_PROBLEM));
 
         cloneProblem =state.parameters.getBoolean(base.push(P_CLONE_PROBLEM), null, true);
         if (!cloneProblem && (state.breedthreads > 1)) // uh oh, this can't be right
@@ -193,11 +200,11 @@ public class SimpleEvaluator extends Evaluator
                 from[i] = 0;
                 }
                                 
-            SimpleProblemForm prob = null;
+            Problem prob = null;
             if (cloneProblem)
-                prob = (SimpleProblemForm)(p_problem.clone());
+                prob = (Problem)(p_problem.clone());
             else 
-                prob = (SimpleProblemForm)(p_problem);  // just use the prototype
+                prob = (Problem)(p_problem);  // just use the prototype
             evalPopChunk(state, numinds, from, 0, prob);
             }
         else
@@ -208,7 +215,7 @@ public class SimpleEvaluator extends Evaluator
                 SimpleEvaluatorThread run = new SimpleEvaluatorThread();
                 run.threadnum = i;
                 run.state = state;
-                run.prob = (SimpleProblemForm)(p_problem.clone());
+                run.prob = (Problem)p_problem.clone();
                 threads[i] = pool.start(run, "ECJ Evaluation Thread " + i);
                 }
                         
@@ -244,21 +251,36 @@ public class SimpleEvaluator extends Evaluator
         Although this method is declared
         protected, you should not call it. */
 
-    protected void evalPopChunk(EvolutionState state, int[] numinds, int[] from, int threadnum, SimpleProblemForm p)
+    protected void evalPopChunk(EvolutionState state, int[] numinds, int[] from, int threadnum, Problem p)
         {
         ((ec.Problem)p).prepareToEvaluate(state,threadnum);
+
+        if (!((p instanceof SimpleProblemForm) || (p instanceof GroupedProblemForm)))
+            state.output.fatal(String.format("%s used, but the Problem must be of either %s or %s", this.getClass().getSimpleName(), SimpleProblemForm.class.getSimpleName(), GroupedProblemForm.class.getSimpleName()));
         
         ArrayList<Subpopulation> subpops = state.population.subpops;
         int len = subpops.size();
         
         for(int pop=0;pop<len;pop++)
             {
-            // start evaluatin'!
+            // Get the chunk of individuals we're meant to evaluate
             int fp = from[pop];
             int upperbound = fp+numinds[pop];
             ArrayList<Individual> inds = subpops.get(pop).individuals;
-            for (int x=fp;x<upperbound;x++)
-                p.evaluate(state,inds.get(x), pop, threadnum);
+            final Individual[] chunk = new Individual[numinds[pop]];
+            int i = 0;
+            for (int x=fp; x < upperbound; x++)
+                chunk[i++] = inds.get(x);
+
+            // start evaluatin'!
+            if (p instanceof GroupedProblemForm) { // Evaluate the chunk all at once
+                ((GroupedProblemForm)p).evaluate(state, chunk, null, false, null, threadnum);
+            }
+            else {  // Evaluate each individual in the chunk sequentially
+                assert(p instanceof SimpleProblemForm);
+                for (Individual ind : chunk)
+                    ((SimpleProblemForm)p).evaluate(state, ind, pop, threadnum);
+            }
             state.incrementEvaluations(upperbound - fp);
             }
                         
@@ -288,7 +310,7 @@ public class SimpleEvaluator extends Evaluator
         {
         public int threadnum;
         public EvolutionState state;
-        public SimpleProblemForm prob = null;
+        public Problem prob = null;
         
         public void run() 
             {

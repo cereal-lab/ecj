@@ -3328,6 +3328,19 @@ If you're doing \class{ec.simple.SimpleProblemForm} may wish to also implement t
 
 Notice that \method{describe(...)} basically looks the same as \method{evaluate(...)}, except that you always do evaluation (why wouldn't you?), and don't set the fitness (why would you?).
 
+
+\subsection{Grouped Evaluation}
+
+Problems that implement \class{ec.simple.SimpleProblemForm} as described above can only evaluate individuals one-at-a-time.  This doesn't stop us from using multiple Problem instances to do multithreading  (see Section~\ref{threads}) and/or distributed evaluation (Chapter~\ref{ch_parallel}).  But in some cases it is helpful to define a problem that explicitly takes an array of multiple individuals to evaluate in a single function call.
+
+For example, \class{ec.app.command.CommandProblem} implements a fitness function that sends real-vectored genomes to an external process to be evaluated.  This could be used to, say, evaluate subsets of a population in parallel in a GPU-accelerated simulator.
+
+Most algorithms using ECJ will use \class{ec.simple.SimpleEvaluator} to perform fitness evaluation.  This class can make use of either a SimpleProblemForm or a GroupedProblemForm to evaluate chunks of individuals.
+
+Grouped evaluation also plays a role in ECJ's coevolutionary algorithms---see Section~\ref{ec.coevolve}.
+
+
+
 \section{Breeders}
 \label{breeders}
 
@@ -3375,7 +3388,7 @@ Alternatively you can define the number of elites as a proportion of the Subpoup
 breed.elite-fraction.0 = 0.25
 }
 
-You can't do both, but you can do neither: rhe default value is no elites.
+You can't do both, but you can do neither: the default value is no elites.
 
 You don't have to specify the elitism on a per-Subpopulation basis.  If you specified a default subpopulation using the parameter  \parameter{pop.default-subpop} (see Section~\ref{default-subpop}), SimpleBreeder will try this instead when it can't find an elitism parameter, and will issue a warning letting you know it's doing so.  For example, if you declared:
 
@@ -5355,6 +5368,8 @@ evaluations = 10000
 }
 
 ECJ will still treat a ``generation'' as \(p\) worth of individuals being evaluated.  Note that, unlike was the case for generational evolution, the number of evaluations does not have to be a multiple of \(p\): when \parameter{evaluations} number of individuals have been evaluated, the process terminates.  However, \parameter{evaluations}, if you set it, does have to be at least as big as the total initial population size.
+
+Normally in generational EC, ECJ will terminate when the number of generations has been reached.  In steady-state EC, ECJ will terminate when {\it either} the number of evaluations (if defined) {\it or} the number of generations (if defined) have been reached, whichever is sooner.
 
 
 Steady-State evolution in ECJ works in two stages:
@@ -8295,7 +8310,7 @@ gp.fs.0.func.4.nc = nc1
 Also we're using the \class{MyProblem} and \class{MyData} classes defined in Section~\ref{definingtherepresentation} as our Problem.  Even though we're not using ADFs (see Section~\ref{ec.gp.ADF}), we need to define a few items here as well.
 
 \params{%
-\# Our Problem
+\# Our Problem\\
 eval.problem = ec.app.myapp.MyProblem\\
 eval.problem.data = ec.app.myapp.MyData\\
 gp.problem.stack = ec.gp.ADFStack\\
@@ -11077,6 +11092,7 @@ rule.xover.toss = true
 
 
 \chapter{Parallel Processes}
+\label{ch_parallel}
 
 ECJ has various built-in methods for parallelism, and they can be used in combination with one another:
 
@@ -11156,13 +11172,13 @@ Again, the default is 1, which is safe but inefficient.
 
 \paragraph{Warning!} If you set these two parameters wrong, you may wind up sending all your individuals to just a few slaves, while the others sit by idly. Let's say that the value \(N\) is equal to the floor of the number of individuals in a subpopulation divided by the number of slaves.  For example, if you have 100 individuals and 45 slaves, then \(N=2\).  In general, you never want your \parameter{job-size} to be greater than \(N\).  Furthermore, if your \parameter{job-size} is set to some value \(M\), you never want your \parameter{max-jobs-per-slave} to be greater than \(\lfloor N / M \rfloor\).  The safe (but potentially network-inefficient) settings are always 1 and 1 respectively.
 
-ECJ would prefer to compress the network streams to make them more efficient.  But it can't do it without the jzlib/ZLIB library, which you must install separately\footnote{Sure, Java has built-in compression routines. Unfortunately they're entirely broken for network streams: they don't support ``partial flush'', a critical item for sending stuff across networks.  They're only really useful for compressing files on disks.  It's a long-standing Java bug, and unlikely to get fixed in the foreseeable future.} (see the ECJ main webpage or http:/\!/www.jcraft.com/jzlib).  Once it's installed, you can turn it on like this:
+ECJ would prefer to compress the network streams to make them more efficient.  But it can't do it without the jzlib/ZLIB library, which you must install separately\footnote{Sure, Java has built-in compression routines. Unfortunately they're entirely broken for network streams: they don't support ``partial flush'', a critical item for sending stuff across networks.  They're only really useful for compressing files on disks.  It's a long-standing Java bug, and unlikely to get fixed in the foreseeable future.} (see the ECJ main webpage or http:/\!/www.jcraft.com/jzlib).  Once it's installed, you can turn it on like this in the Master:
 
 \params{%
 eval.compression = true
 }
 
-\noindent{\bf Another warning!\quad} If you turn on compression in your master but not your slave (or vice versa), the slave will connect but then nothing will happen.  You will not get any warning about your error.
+\noindent{\bf Another warning!\quad} It's often the case that compression is {\it not} more efficient, but in fact significantly {\it less} efficient due to the overhead of compression.  You'll have to try for yourself.
 
 \paragraph{Keep Your Master Single-Threaded} Multi-threaded breeding is fine.  But evaluation should be kept single-threaded, that is,
 
@@ -11392,21 +11408,23 @@ eval.masterproblem = ec.app.myapp.MyMasterProblem
 
 An instance of this MasterProblem subclass is used by the Master.  When a Slave shows up, the Master will call the method \method{sendAdditionalData(...)} on that instance to give you the chance to send data down the stream to the Slave before any evaluation occurs.  The Slave receives this data by calling the method \method{receiveAdditionalData(...)} on a dummy instance of this same subclass.  This dummy instance will not be used for any purpose except to handle the data reception. That method must store away the transferred data, typically as instance variable in your subclass which you have created for this purpose.  Finally, each time the Slave creates a new EvolutionState (and it may do so many times), it calls \method{transferAdditionalData(...)} on that dummy instance to give it a chance to modify and set up EvolutionState appropriately to reflect the data it had received from the Master.
 
+The default setting of MasterProblem is to just call \method{sendAdditionalData(...)}, \method{receiveAdditionalData(...)}, and method{transferAdditionalData(...)} on its subsidiary Problem class, so you can just override the Problem to implement things there if you like.
+
 \method{sendAdditionalData(...)} will be called once on the Master for each Slave that shows up. \method{receiveAdditionalData(...)} will only be called once on the Slave side.  \method{transferAdditionalData(...)} may be called multiple times on the Slave side, every time a new EvolutionState is loaded and set up.  It is entirely up to you to handle the protocol for sending and receiving this data: if you mess up (write more data than you read on the other side, say), it's undefined what'll happen. Probably something bad.
 
-\begin{methods}{ec.eval.MasterProblem}
+\begin{methods}{Additional ec.Problem}
 \mthd{public void sendAdditionalData(EvolutionState {\it state}, DataOutputStream {\it dataOut})}
 	Called from the SlaveMonitor's \method{accept()} method to optionally send additional data to the
 		Slave via the dataOut stream.  By default it does nothing. 
 \mthd{public void receiveAdditionalData(EvolutionState {\it state}, DataInputStream {\it dataIn})}
-	Called on a dummy MasterProblem by the Slave.  You should use this method to store away
+	Called on a dummy MasterProblem (and the Problem) by the Slave.  You should use this method to store away
 		received data via the dataIn stream for later transferring to the current EvolutionState via the
 		\method{transferAdditionalData(...)} method.  You should NOT expect this MasterProblem to be used for by the Slave
 		for evolution (though it might).  By default this method does nothing, which is the usual situation. 
 		The EvolutionState is provided solely for you to be able to output warnings and errors: do not rely
 		on it for any other purpose (including access of the random number generator or storing any data).
 \mthd{public void transferAdditionalData(EvolutionState {\it state})}
-	Called on a dummy MasterProblem by the Slave to transfer data previously loaded via 
+	Called on a dummy MasterProblem (and then Problem) by the Slave to transfer data previously loaded via 
 		\method{receiveAdditionalData(...)} to
 		a running EvolutionState at the beginning of evolution.  This method may be called multiple times if multiple
 		EvolutionStates are created. By default this method does nothing, which is the usual situation.  Unlike
@@ -13695,9 +13713,10 @@ Ant Colony Optimization algorithms and related methods for combinatorial optimiz
 
 ECJ offers a flexible framework for combinatorial optimization in the \package{ec/co} package.  It's distinguishing feature is a special \class{ConstructiveProblemForm}, which enforces the idea that to define a combinatorial optimization problem you must define not only a {\it fitness function} for evaluating whole solutions, but also a {\it neighborhood} of candidate components that solutions can be built from, and a means of assigning a {\it heuristic value} to individual components.  Describing problems in this abstract way allows us to implement a variety of combinatorial optimization algorithms without making domain-specific assumptions (like assuming that solutions represent paths on a connected graph---a limiting assumption that tends to be built into most implementations of Ant Colony algorithms).
 
-Here we describe how to use three combinatorial optimization methods offered by ECJ:
+Here we describe how to use four combinatorial optimization methods offered by ECJ:
 \begin{itemize}
         \item Ant System (AS)
+        \item Max-Min Ant System (MMAS)
         \item Ant Colony System (ACS)
         \item Greedy Randomized Adaptive Search Procedure (GRASP)
 \end{itemize}
@@ -13806,6 +13825,29 @@ eval.problem =                                  ec.app.knapsack.KnapsackProblem
 eval.problem.knapsack-size =                    165
 eval.problem.sizes =                            23 31 29 44 53 38 63 85 89 82
 eval.problem.values =                           92 57 49 68 60 43 67 84 87 72
+\end{verbatim}
+
+\subsection{Max-Min Ant System}
+
+Max-Min Ant System{MMAS} \cite{mmas} has three key differences from Ant System:
+\begin{itemize}
+        \item Only a single any lays down pheromones this may be either iteration-best or global-best,
+        \item the range of possible pheromones is bounded, and
+        \item the pheromone trails are initially set to their max allowed value.
+\end{itemize}
+
+Max-Min Ant System shares most of its parameters with Ant System but switches out its update rule and includes a maximum and minimum.
+Additionally the pheromone table is given its initial concentration.
+
+\begin{verbatim}
+##############################
+# Max-Min Ant System details
+##############################
+pop.subpop.0.species.update-rule =              ec.co.ant.MaxMinUpdateRule
+pop.subpop.0.species.update-rule.max-value =              100.0
+pop.subpop.0.species.update-rule.min-value =              0.0
+
+pop.subpop.0.species.pheromone-table.initial-concentration =	100.0
 \end{verbatim}
 
 

@@ -13,7 +13,6 @@ package ec.eval;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -117,6 +116,12 @@ import ec.util.*;
  
 public class Slave 
     {
+    public final static String P_EVALNODELAY = "eval.no-delay";
+
+    public final static String P_EVALSENDBUFER = "eval.send-buffer";
+
+    public final static String P_EVALRECVBUFFER = "eval.recv-buffer";
+
     public final static String P_EVALSLAVENAME = "eval.slave.name";
         
     public final static String P_EVALMASTERHOST = "eval.master.host";
@@ -172,8 +177,6 @@ public class Slave
         EvolutionState state = null;
         ParameterDatabase parameters = null;
         Output output = null;
-        
-        boolean store;
                 
         // 0. find the parameter database
         for (int x = 0; x < args.length - 1; x++)
@@ -192,7 +195,7 @@ public class Slave
                 catch(Exception e)
                     {
                     e.printStackTrace();
-                    Output.initialError("An exception was generated upon reading the parameter file \"" + args[x+1] + "\".\nHere it is:\n" + e); 
+                    Output.initialError("An exception was generated upon reading the parameter file \"" + args[x+1] + "\".\nHere it is:\n" + e, true); 
                     }
         
         // search for a resource class (we may or may not use this)
@@ -202,7 +205,7 @@ public class Slave
                 try
                     {
                     if (parameters != null)  // uh oh
-                        Output.initialError("Both -from and -at arguments provided.  This is not permitted.\nFor help, try:  java ec.Evolve -help");
+                        Output.initialError("Both -from and -at arguments provided.  This is not permitted.\nFor help, try:  java ec.Evolve -help", true);
                     else 
                         cls = Class.forName(args[x+1]);
                     break;
@@ -212,7 +215,7 @@ public class Slave
                     e.printStackTrace();
                     Output.initialError(
                         "An exception was generated upon extracting the class to load the parameter file relative to: " + args[x+1] + 
-                        "\nFor help, try:  java ec.Evolve -help\n\n" + e);
+                        "\nFor help, try:  java ec.Evolve -help\n\n" + e, true);
                     }
                     
         // search for a resource (we may or may not use this)
@@ -221,7 +224,7 @@ public class Slave
                 try
                     {
                     if (parameters != null)  // uh oh
-                        Output.initialError("Both -file and -from arguments provided.  This is not permitted.\nFor help, try:  java ec.Evolve -help");
+                        Output.initialError("Both -file and -from arguments provided.  This is not permitted.\nFor help, try:  java ec.Evolve -help", true);
                     else 
                         {
                         if (cls == null)  // no -at
@@ -239,13 +242,13 @@ public class Slave
                     {
                     e.printStackTrace();
                     Output.initialError(
-                        "The parameter file is missing at the resource location: " + args[x+1] + " relative to the class: " + cls + "\n\nFor help, try:  java ec.Evolve -help");
+                        "The parameter file is missing at the resource location: " + args[x+1] + " relative to the class: " + cls + "\n\nFor help, try:  java ec.Evolve -help", true);
                     }
 
         
         
         if (parameters == null)
-            Output.initialError("No parameter file was specified." ); 
+            Output.initialError("No parameter file was specified.", true ); 
                 
         // 5. Determine whether or not to return entire Individuals or just Fitnesses
         //    (plus whether or not the Individual has been evaluated).
@@ -262,19 +265,18 @@ public class Slave
         silent = silent || parameters.getBoolean(new Parameter(P_MUZZLE), null, false);
 
                 
-        // 6. Open a server socket and listen for requests
+        // 6. Open a socket and listen for requests
         String slaveName = parameters.getString(
             new Parameter(P_EVALSLAVENAME),null);
                 
         String masterHost = parameters.getString(
             new Parameter(P_EVALMASTERHOST),null );
         if (masterHost == null)
-            Output.initialError("Master Host missing", new Parameter(P_EVALMASTERHOST));
+            Output.initialError("Master Host missing", new Parameter(P_EVALMASTERHOST), true);
         int masterPort = parameters.getInt(
             new Parameter(P_EVALMASTERPORT),null, 0);
         if (masterPort == -1)
-            Output.initialError("Master Port missing", new Parameter(P_EVALMASTERPORT));
-        boolean useCompression = parameters.getBoolean(new Parameter(P_EVALCOMPRESSION),null,false);
+            Output.initialError("Master Port missing", new Parameter(P_EVALMASTERPORT), true);
                 
         runTime = parameters.getInt(new Parameter(P_RUNTIME), null, 0); 
                 
@@ -282,10 +284,16 @@ public class Slave
 
         oneShot = parameters.getBoolean(new Parameter(P_ONESHOT),null,true); 
         
+        final int noDelay = parameters.exists(new Parameter(P_EVALNODELAY), null) ? 
+        	(parameters.getBoolean(new Parameter(P_EVALNODELAY), null, true) ? 1 : 0) : -1;
+
+        final int sendbuffer = parameters.getInt(new Parameter(P_EVALSENDBUFER), null, -1); 
+        final int recvbuffer = parameters.getInt(new Parameter(P_EVALRECVBUFFER), null, -1); 
+        
         if (runEvolve && !returnIndividuals)
             {
             Output.initialError("You have the slave running in 'evolve' mode, but it's only returning fitnesses to the master, not whole individuals.  This is almost certainly wrong.",
-                new Parameter(P_RUNEVOLVE), new Parameter(P_RETURNINDIVIDUALS));
+                new Parameter(P_RUNEVOLVE), new Parameter(P_RETURNINDIVIDUALS), true);
             }
         
         if (!silent) 
@@ -332,8 +340,39 @@ public class Slave
 
                     try
                         {
+                        if (noDelay == 1)
+                        	{
+                        	socket.setTcpNoDelay(true);
+                        	if (!silent) 
+                        	Output.initialMessage("NoDelay -> ON");
+                        	}
+                        else if (noDelay == 0)
+                        	{
+                        	socket.setTcpNoDelay(false);
+                        	if (!silent) 
+                        	Output.initialMessage("NoDelay -> OFF");
+                        	}
+
+                        if (sendbuffer >= 0)
+                        	{
+                        	if (!silent) 
+                        	Output.initialMessage("SendBuffer -> " + sendbuffer + " was " + socket.getSendBufferSize());
+                        	socket.setSendBufferSize(sendbuffer);
+                        	}
+                        
+                        if (recvbuffer >= 0)
+                        	{
+                        	if (!silent) 
+                        	Output.initialMessage("RecvBuffer -> " + recvbuffer + " was " + socket.getReceiveBufferSize());
+                        	socket.setReceiveBufferSize(recvbuffer);
+                        	}
+                        	
                         InputStream tmpIn = socket.getInputStream();
                         OutputStream tmpOut = socket.getOutputStream();
+                        
+                        // The first thing we do is read a single byte telling us whether to use compression or nt
+                        boolean useCompression = (tmpIn.read() != 0);
+                        
                         if (useCompression)
                             {
                             tmpIn = Output.makeCompressingInputStream(tmpIn);
@@ -366,6 +405,7 @@ public class Slave
                         slaveName = socket.getLocalAddress().toString() + "/" + slaveNum;
                         if (!silent) Output.initialMessage("No slave name specified.  Using: " + slaveName);
                         }
+                    Output.initialMessage("I am slave " + slaveName);
                                 
                     dataOut.writeUTF(slaveName);
                     dataOut.flush();
@@ -375,7 +415,7 @@ public class Slave
                 
                     if (output != null) output.close();
                     output = new Output(false);              // do not store messages, just print them
-                    output.setThrowsErrors(true);  // don't do System.exit(1);
+                    output.setThrowsErrors(true);  			 // don't do System.exit(1);
                 
                     // stdout is always log #0. stderr is always log #1.
                     // stderr accepts announcements, and both are fully verbose
@@ -430,13 +470,13 @@ public class Slave
                     final MasterProblem storage = state.evaluator.masterproblem;
                     storage.receiveAdditionalData(state, dataIn);
                     storage.transferAdditionalData(state);
-                                
+                    
                     try
                         {
                         while (true)
                             {
                             EvolutionState newState = state;
-                        
+
                             if (runEvolve) 
                                 {
                                 // Construct and use a new EvolutionState.  This will be inefficient the first time around
@@ -487,32 +527,35 @@ public class Slave
                     {
                     if (state != null)
                         state.output.fatal(e.getMessage());
-                    else if (!silent) Output.initialError("FATAL ERROR (EvolutionState not created yet): " + e.getMessage());
+                    else if (!silent) Output.initialError("FATAL ERROR (EvolutionState not created yet): " + e.getMessage(), true);
                     }
                 catch (IOException e)
                     {
                     if (state != null)
                         state.output.fatal("Unable to connect to master:\n" + e);
-                    else if (!silent) Output.initialError("FATAL ERROR (EvolutionState not created yet): " + e);
+                    else if (!silent) Output.initialError("FATAL ERROR (EvolutionState not created yet): " + e, true);
                     }
                 }
             catch (Output.OutputExitException e)
                 {
                 // here we restart if necessary
                 try { socket.close(); } catch (Exception e2) { }
-                if (oneShot) System.exit(0);
+                if (oneShot) { throw e; }
                 }
             catch (OutOfMemoryError e)
                 {
-                // Let's try fixing things
+                try { socket.close(); } catch (Exception e2) { }
+                if (oneShot) { throw e; }
+                
+                // Otherwise let's try fixing things.  This will probably fail
+                socket = null;
                 state = null;
                 System.gc();
-                try { socket.close(); } catch (Exception e2) { }
-                socket = null;
-                System.gc();
                 System.err.println(e);
-                if (oneShot) System.exit(0);
                 }
+                
+            if (oneShot) { if (!silent) Output.initialMessage("\n\nExiting Slave: this shouldn't have happened"); }		// we shouldn't be able to get here
+            
             if (!silent) Output.initialMessage("\n\nResetting Slave");
             }
         }
@@ -520,8 +563,6 @@ public class Slave
     public static void evaluateSimpleProblemForm( final EvolutionState state, boolean returnIndividuals,
         DataInputStream dataIn, DataOutputStream dataOut, String[] args )
         {
-        ParameterDatabase params=null; 
-        
         // first load the individuals
         int numInds=1; 
         try
@@ -557,8 +598,6 @@ public class Slave
         boolean[] updateFitness = new boolean[numInds];
         final Individual[] inds = new Individual[numInds];
         
-                        
-                        
         // Either evaluate all the individuals once and return them immediately
         // (we'll do so in a steady-state-ish fashion, firing off threads as soon as we read in individuals,
         // and returning them as soon as they come in, albeit in the proper order)
@@ -567,33 +606,39 @@ public class Slave
             ThreadPool.Worker[] threads = new ThreadPool.Worker[state.evalthreads];
             final SimpleProblemForm[] problems = new SimpleProblemForm[state.evalthreads];
             int[] indForThread = new int[state.evalthreads];
-                        
+           
+           	// build the problems
+           	for(int i = 0; i < problems.length; i++)
+           		{
+           		problems[i] = ((SimpleProblemForm)(state.evaluator.p_problem.clone()));
+           		}
+           		
+            int t = 0;              // thread index            
             try
                 {
-                int t = 0;              // thread index
-                        
-                // start up all the threads
                 for(int i = 0 ; i < numInds; i++)
                     {
                     // load individual
                     inds[i] = state.population.subpops.get(subpops[i]).species.newIndividual(state, dataIn);
                     updateFitness[i] = dataIn.readBoolean(); 
 
-                    // fire up evaluation thread on individual
+                    // get next thread index
                     if (t >= state.evalthreads) t = 0;       // we can only be here if evalthreads > numInds
+                    
+                    // Does a thread exist?  Wait for him and process
                     if (threads[t] != null)
                         {
                         pool.join(threads[t]);  // ran out of threads, wait for new ones
                         returnIndividualsToMaster(state, inds, updateFitness, dataOut, returnIndividuals, indForThread[t]);  // return just that individual
                         }
-                    if (problems[t] == null) problems[t] = ((SimpleProblemForm)(state.evaluator.p_problem.clone()));
 
-                    final int j = i;
-                    final int s = t;
+					// Assign new thread to problem
+                    final int _i = i;
+                    final int _t = t;
                     indForThread[t] = i;
                     threads[t] = pool.start(new Runnable()
                         {
-                        public void run() { problems[s].evaluate( state, inds[j], subpops[j], 0 ); }
+                        public void run() { problems[_t].evaluate( state, inds[_i], subpops[_i], _t ); }
                         }, "Evaluation of individual " + i);
                     t++;
                     }
@@ -659,8 +704,8 @@ public class Slave
                 state.population.subpops.get(subpops[i]).individuals.set(counts[subpops[i]]++,inds[i]);
             
             // Evaluate the population until time is up, or the evolution stops
-            int result = state.R_NOTDONE; 
-            while (result == state.R_NOTDONE) 
+            int result = EvolutionState.R_NOTDONE; 
+            while (result == EvolutionState.R_NOTDONE) 
                 { 
                 result = state.evolve(); 
                 endTime = System.currentTimeMillis(); 

@@ -40,6 +40,8 @@ import ec.util.Checkpoint;
 
 public class SimpleEvolutionState extends EvolutionState
     {
+    private static final long serialVersionUID = 1;
+
     public void startFresh() 
         {
         output.message("Setting up");
@@ -109,7 +111,7 @@ public class SimpleEvolutionState extends EvolutionState
             return R_SUCCESS;
             }
 
-    	/// GLOBAL STATE UPDATE (used by some algorithms like ACO to EDAS to update auxiliary state)
+        /// GLOBAL STATE UPDATE (used by some algorithms like ACO to EDAS to update auxiliary state)
         evaluator.postEvaluationGlobalUpdate(this);
         
         // BREEDING
